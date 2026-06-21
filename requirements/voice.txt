@@ -8,6 +8,9 @@
 # fixed config library.
 coqui-tts>=0.25.0
 coqpit-config
+# coqui-tts imports transformers.pytorch_utils.isin_mps_friendly, which
+# transformers 5.x removed — pin to the 4.x line.
+transformers>=4.43,<5
 soundfile
 numpy<2
 # spacy (pulled by coqui-tts) imports these but they don't always resolve.
