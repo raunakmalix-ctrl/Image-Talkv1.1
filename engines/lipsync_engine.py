@@ -63,8 +63,12 @@ class LipSyncEngine(BaseEngine):
             "--guidance_scale", str(guidance),
         ]
         print("[LipSync] Running LatentSync ...")
-        proc = subprocess.run(cmd, cwd=LATENTSYNC_DIR,
-                              capture_output=True, text=True, env=clean_env())
+        # LatentSync's script imports its own `latentsync` package from the repo
+        # root, so put that on PYTHONPATH.
+        proc = subprocess.run(
+            cmd, cwd=LATENTSYNC_DIR, capture_output=True, text=True,
+            env=clean_env({"PYTHONPATH": LATENTSYNC_DIR}),
+        )
         if proc.returncode != 0 or not os.path.exists(out_path):
             raise RuntimeError(
                 f"LatentSync exit {proc.returncode}\n"

@@ -9,3 +9,4 @@ sentencepiece
 imageio
 imageio-ffmpeg
 av
+setuptools<81

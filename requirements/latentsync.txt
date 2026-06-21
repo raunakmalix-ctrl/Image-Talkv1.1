@@ -2,6 +2,8 @@
 # Installed in addition to LatentSync's own requirements.txt (see make_venvs.sh).
 # torch/torchvision/torchaudio (CUDA 12.1) are installed by make_venvs.sh.
 numpy<2
+# Python 3.12 venvs omit setuptools; librosa/Wav2Lip need pkg_resources.
+setuptools<81
 opencv-python==4.9.0.80
 librosa==0.10.1
 scipy
