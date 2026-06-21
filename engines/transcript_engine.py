@@ -18,7 +18,7 @@ import subprocess
 import tempfile
 
 from core.base_engine import BaseEngine
-from core.utils import timestamp_file
+from core.utils import timestamp_file, transcode_h264
 from core.config import FFMPEG_PATH, FFPROBE_PATH, WHISPERX_MODEL
 from core.device import DEVICE
 from engines.voice_engine import VoiceEngine
@@ -152,8 +152,11 @@ class TranscriptEngine(BaseEngine):
 
         display = "\n".join(s["text"] for s in segments)
         xtts_lang = lang if lang in _XTTS_LANGS else "en"
+        # Normalize to H.264 so the lip-sync engines can decode the frames
+        # (Colab can't decode AV1, which the uploaded clip may be).
+        norm_video = transcode_h264(video_path)
         state = {
-            "video": video_path,
+            "video": norm_video,
             "audio": audio_path,
             "segments": segments,
             "language": xtts_lang,

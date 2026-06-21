@@ -1,6 +1,7 @@
 import os
 import time
 import tempfile
+import subprocess
 
 from core.config import OUTPUTS_DIR, FFMPEG_PATH, FFPROBE_PATH
 
@@ -32,6 +33,22 @@ def to_wav(audio_path, sr=16000, channels=1):
     tmp.close()
     audio.export(tmp.name, format="wav")
     return tmp.name, True
+
+
+def transcode_h264(video_path):
+    """
+    Re-encode any video to H.264 / yuv420p so OpenCV/ffmpeg can decode it
+    everywhere (Colab can't decode AV1, which many phone/screen recordings use).
+    Returns a new mp4 path.
+    """
+    out = timestamp_file("norm", "mp4")
+    subprocess.run(
+        [FFMPEG_PATH, "-y", "-i", video_path,
+         "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18",
+         "-c:a", "aac", out],
+        check=True, capture_output=True, text=True,
+    )
+    return out
 
 
 def audio_duration(audio_path):

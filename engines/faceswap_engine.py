@@ -17,7 +17,7 @@ import numpy as np
 
 from core.base_engine import BaseEngine
 from core.model_manager import load_model
-from core.utils import timestamp_file
+from core.utils import timestamp_file, transcode_h264
 from core.device import empty_cache
 from core.config import (
     INSWAPPER_PATH, INSIGHTFACE_ROOT, GFPGAN_PATH, FFMPEG_PATH,
@@ -165,6 +165,9 @@ class FaceSwapEngine(BaseEngine):
         if not src_faces:
             raise ValueError("No face detected in source image.")
         src_face = _largest_face(src_faces)
+
+        # Normalize to H.264 so OpenCV can decode it (Colab can't read AV1).
+        target_video = transcode_h264(target_video)
 
         cap = cv2.VideoCapture(target_video)
         if not cap.isOpened():
