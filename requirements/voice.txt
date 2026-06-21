@@ -1,8 +1,7 @@
 # venv_voice — XTTS-v2 voice cloning (isolated; pins old transformers stack).
 # coqui-tts is the maintained fork of the original (unmaintained) "TTS" package;
-# it still exposes `import TTS`.
-torch==2.1.2
-torchaudio==2.1.2
+# it still exposes `import TTS`. torch/torchaudio are installed by make_venvs.sh
+# from the CUDA wheel index.
 coqui-tts==0.24.1
 soundfile
 numpy<2
