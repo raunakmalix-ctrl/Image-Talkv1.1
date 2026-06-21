@@ -17,6 +17,23 @@ if not os.environ.get("HF_TOKEN"):
 
 import gradio as gr
 
+# Work around a gradio_client bug where a JSON schema with a boolean
+# `additionalProperties` crashes the API-info endpoint that the share tunnel
+# pings ("argument of type 'bool' is not iterable"). Harmless to the UI, but
+# floods the log — short-circuit non-dict schemas.
+try:
+    import gradio_client.utils as _gcu
+    _orig_j2p = _gcu._json_schema_to_python_type
+
+    def _safe_j2p(schema, defs=None):
+        if not isinstance(schema, dict):
+            return "Any"
+        return _orig_j2p(schema, defs)
+
+    _gcu._json_schema_to_python_type = _safe_j2p
+except Exception:
+    pass
+
 from core.engine_registry import ENGINES
 from core.model_manager import vram_status
 from core.utils import audio_duration

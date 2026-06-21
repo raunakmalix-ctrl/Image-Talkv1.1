@@ -75,8 +75,9 @@ def gfpgan():
 
 
 def wav2lip():
-    # Community mirror of the original Wav2Lip GAN checkpoint.
-    _hf_file("justinjohn0306/Wav2Lip", "wav2lip_gan.pth", WAV2LIP_CKPT)
+    # Fallback lip-sync only (LatentSync is primary). GitHub release mirror.
+    _wget("https://github.com/justinjohn0306/Wav2Lip/releases/download/"
+          "models/wav2lip_gan.pth", WAV2LIP_CKPT)
 
 
 def sadtalker():
