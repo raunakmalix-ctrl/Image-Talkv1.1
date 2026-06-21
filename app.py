@@ -11,6 +11,10 @@ PROJECT_ROOT = os.environ.get(
 )
 sys.path.insert(0, PROJECT_ROOT)
 
+# An empty HF_TOKEN makes huggingface_hub send an illegal "Bearer " header.
+if not os.environ.get("HF_TOKEN"):
+    os.environ.pop("HF_TOKEN", None)
+
 import gradio as gr
 
 from core.engine_registry import ENGINES

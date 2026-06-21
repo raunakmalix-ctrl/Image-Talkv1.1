@@ -27,7 +27,8 @@ whisperx
 pydub
 soundfile
 imageio-ffmpeg
-huggingface_hub
+# < 1.0: keeps HfFolder, which Colab's gradio 4.x still imports.
+huggingface_hub>=0.25,<1.0
 
 # insightface / basicsr need numpy < 2
 numpy<2

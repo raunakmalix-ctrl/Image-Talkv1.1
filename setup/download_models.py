@@ -21,7 +21,8 @@ from core.config import (
     WAV2LIP_CKPT, SADTALKER_DIR, LATENTSYNC_DIR,
 )
 
-HF_TOKEN = os.environ.get("HF_TOKEN")
+# Empty string -> None, otherwise hf_hub builds an illegal "Bearer " header.
+HF_TOKEN = os.environ.get("HF_TOKEN") or None
 
 
 def _hf_snapshot(repo_id, local_dir, **kw):
@@ -75,11 +76,15 @@ def gfpgan():
 
 def wav2lip():
     # Community mirror of the original Wav2Lip GAN checkpoint.
-    _hf_file("numz/wav2lip_studio", "Wav2Lip/wav2lip_gan.pth", WAV2LIP_CKPT)
+    _hf_file("justinjohn0306/Wav2Lip", "wav2lip_gan.pth", WAV2LIP_CKPT)
 
 
 def sadtalker():
     # Use SadTalker's own downloader -> third_party/SadTalker/checkpoints
+    sentinel = os.path.join(SADTALKER_DIR, "checkpoints",
+                            "SadTalker_V0.0.2_512.safetensors")
+    if os.path.exists(sentinel):
+        print("  exists"); return
     script = os.path.join(SADTALKER_DIR, "scripts", "download_models.sh")
     if not os.path.exists(script):
         print("  SadTalker repo not cloned; run install_main.sh first"); return
