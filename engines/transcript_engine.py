@@ -116,9 +116,13 @@ class TranscriptEngine(BaseEngine):
     def extract_transcript(self, video_path):
         audio_path = _extract_audio(video_path)
 
-        # GPU first; fall back to CPU if ctranslate2's cuDNN isn't available
-        # (Colab ships cuDNN 9, faster-whisper's GPU backend wants cuDNN 8).
-        devices = ["cuda", "cpu"] if DEVICE == "cuda" else ["cpu"]
+        # Default to CPU: faster-whisper's GPU backend (ctranslate2) needs
+        # cuDNN 8, but Colab ships cuDNN 9 — and the mismatch is a FATAL abort
+        # that kills the whole process (not a catchable exception), so we must
+        # not even try CUDA by default. Opt in with WHISPER_DEVICE=cuda only if
+        # you've made cuDNN 8 available.
+        prefer = os.environ.get("WHISPER_DEVICE", "cpu")
+        devices = ["cuda", "cpu"] if prefer == "cuda" else ["cpu"]
         raw, lang, last_err = None, "en", None
         for dev in devices:
             try:
