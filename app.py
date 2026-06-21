@@ -133,7 +133,9 @@ def run_txt2img(prompt, variant, width, height, steps, guidance, seed):
         return None, warn("Prompt required")
     try:
         free_inprocess()
-        v = "dev" if variant.startswith("Dev") else "schnell"
+        v = {"SDXL (open)": "sdxl",
+             "FLUX Schnell (token)": "schnell",
+             "FLUX Dev (token)": "dev"}.get(variant, "sdxl")
         out = diffusion.run(prompt=prompt, variant=v,
                             width=int(width), height=int(height),
                             steps=int(steps), guidance=float(guidance),
@@ -258,8 +260,9 @@ with gr.Blocks(css=CSS, title="Image-Talk", analytics_enabled=False) as demo:
                     gr.HTML("<div class='section-label'>Prompt</div>")
                     ti_prompt = gr.Textbox(label="Prompt", lines=4,
                         placeholder="A cinematic portrait, golden hour, ultra-detailed…")
-                    ti_variant = gr.Radio(["Dev (best quality)", "Schnell (fast)"],
-                                          value="Dev (best quality)", label="FLUX model")
+                    ti_variant = gr.Radio(
+                        ["SDXL (open)", "FLUX Schnell (token)", "FLUX Dev (token)"],
+                        value="SDXL (open)", label="Model  (FLUX needs HF_TOKEN + license)")
                     with gr.Row():
                         ti_w = gr.Slider(512, 1536, value=1024, step=64, label="Width")
                         ti_h = gr.Slider(512, 1536, value=1024, step=64, label="Height")

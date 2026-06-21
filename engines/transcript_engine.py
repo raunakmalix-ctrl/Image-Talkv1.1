@@ -28,17 +28,16 @@ from engines.lipsync_engine import LipSyncEngine
 _XTTS_LANGS = {"en", "hi"}
 
 _whisper_model = None
-_align_cache   = {}
 
 
 def _load_whisper():
     global _whisper_model
     if _whisper_model is None:
-        import whisperx
+        from faster_whisper import WhisperModel
         compute = "float16" if DEVICE == "cuda" else "int8"
-        print(f"[Transcript] Loading WhisperX ({WHISPERX_MODEL}) ...")
-        _whisper_model = whisperx.load_model(
-            WHISPERX_MODEL, DEVICE, compute_type=compute
+        print(f"[Transcript] Loading faster-whisper ({WHISPERX_MODEL}) ...")
+        _whisper_model = WhisperModel(
+            WHISPERX_MODEL, device=DEVICE, compute_type=compute
         )
     return _whisper_model
 
@@ -108,32 +107,21 @@ class TranscriptEngine(BaseEngine):
 
     # ── step 1 ────────────────────────────────────────────────────────────────
     def extract_transcript(self, video_path):
-        import whisperx
         audio_path = _extract_audio(video_path)
 
         model = _load_whisper()
-        audio = whisperx.load_audio(audio_path)
-        result = model.transcribe(audio, batch_size=16)
-        lang = result.get("language", "en")
+        seg_iter, info = model.transcribe(
+            audio_path, word_timestamps=True, vad_filter=True
+        )
+        lang = getattr(info, "language", "en") or "en"
 
-        # Word-level alignment (best-effort; some langs lack an align model).
-        try:
-            if lang not in _align_cache:
-                _align_cache[lang] = whisperx.load_align_model(
-                    language_code=lang, device=DEVICE
-                )
-            amodel, meta = _align_cache[lang]
-            result = whisperx.align(
-                result["segments"], amodel, meta, audio, DEVICE
-            )
-        except Exception as e:
-            print(f"[Transcript] Alignment skipped ({e}).")
-
-        segments = [
-            {"start": float(s["start"]), "end": float(s["end"]),
-             "text": s["text"].strip()}
-            for s in result["segments"] if s.get("text", "").strip()
-        ]
+        segments = []
+        for s in seg_iter:
+            text = (s.text or "").strip()
+            if text:
+                segments.append({
+                    "start": float(s.start), "end": float(s.end), "text": text,
+                })
         if not segments:
             raise RuntimeError("No speech detected in the video.")
 

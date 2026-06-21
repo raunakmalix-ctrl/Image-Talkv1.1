@@ -25,8 +25,9 @@ gfpgan
 basicsr
 facexlib
 
-# Transcript (Feature 2, step 1)
-whisperx
+# Transcript (Feature 2, step 1) — faster-whisper gives word timestamps without
+# WhisperX's pyannote/torchaudio coupling (which breaks on Colab's torchaudio).
+faster-whisper
 
 # Media utils
 pydub
