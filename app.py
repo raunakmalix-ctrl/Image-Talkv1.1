@@ -44,6 +44,7 @@ voice       = ENGINES["voice"]
 talkingface = ENGINES["talkingface"]
 transcript  = ENGINES["transcript"]
 ltx         = ENGINES["ltx"]
+musetalk    = ENGINES["musetalk"]
 
 LANGS = {"English": "en", "Hindi": "hi"}
 
@@ -79,8 +80,8 @@ def warn(msg): return f"<span class='status-warn'>⚠ {msg}</span>"
 
 
 # ── Feature 1: Talking video ────────────────────────────────────────────────
-def run_talking_video(image, ref_audio, text, language, size, enhance, still,
-                      preprocess, progress=gr.Progress()):
+def run_talking_video(image, ref_audio, text, language, engine, size, enhance,
+                      still, preprocess, progress=gr.Progress()):
     if image is None:
         return None, warn("Upload a portrait image")
     if ref_audio is None:
@@ -92,10 +93,14 @@ def run_talking_video(image, ref_audio, text, language, size, enhance, still,
         progress(0.15, desc="Cloning voice & synthesizing speech ...")
         wav = voice.run(text=text, reference_audio_path=ref_audio,
                         language=LANGS.get(language, "en"))
-        progress(0.55, desc="Animating portrait (SadTalker) ...")
-        out = talkingface.run(portrait_path=image, audio_path=wav,
-                              size=int(size), enhance_face=enhance,
-                              still_mode=still, preprocess=preprocess)
+        if engine.startswith("MuseTalk"):
+            progress(0.55, desc="Lip-syncing (MuseTalk) ...")
+            out = musetalk.run(face_path=image, audio_path=wav)
+        else:
+            progress(0.55, desc="Animating portrait (SadTalker) ...")
+            out = talkingface.run(portrait_path=image, audio_path=wav,
+                                  size=int(size), enhance_face=enhance,
+                                  still_mode=still, preprocess=preprocess)
         return out, ok(os.path.basename(out))
     except Exception as e:
         return None, err(str(e))
@@ -123,9 +128,13 @@ def do_relip(state, edited_text, method, steps, guidance,
         return None, warn("Transcript is empty")
     try:
         free_inprocess()
+        method_map = {"LatentSync": "latentsync", "MuseTalk": "musetalk",
+                      "Wav2Lip": "wav2lip"}
+        m = next((v for k, v in method_map.items() if method.startswith(k)),
+                 "latentsync")
         out = transcript.apply_edits(
             state, edited_text,
-            method=("latentsync" if method.startswith("LatentSync") else "wav2lip"),
+            method=m,
             inference_steps=int(steps), guidance_scale=float(guidance),
             progress=progress,
         )
@@ -229,6 +238,10 @@ with gr.Blocks(css=CSS, title="Image-Talk", analytics_enabled=False) as demo:
                         placeholder="Type what the person should say (English or Hindi)…")
                     tv_lang  = gr.Radio(["English", "Hindi"], value="English",
                                         label="Language")
+                    tv_engine = gr.Radio(
+                        ["SadTalker (head motion)", "MuseTalk (sharp lips)"],
+                        value="SadTalker (head motion)",
+                        label="Engine  (MuseTalk = sharper lips, static head)")
                     with gr.Row():
                         tv_size = gr.Radio(["256", "512"], value="512",
                                            label="Resolution")
@@ -243,8 +256,8 @@ with gr.Blocks(css=CSS, title="Image-Talk", analytics_enabled=False) as demo:
                     tv_status = gr.HTML(ok("Ready"))
             tv_audio.change(audio_info, [tv_audio], [tv_ainfo])
             tv_btn.click(run_talking_video,
-                         [tv_img, tv_audio, tv_text, tv_lang, tv_size, tv_enh,
-                          tv_still, tv_pre],
+                         [tv_img, tv_audio, tv_text, tv_lang, tv_engine, tv_size,
+                          tv_enh, tv_still, tv_pre],
                          [tv_out, tv_status])
 
         # ── 02 Edit & Relip ─────────────────────────────────────────────────
@@ -261,8 +274,9 @@ with gr.Blocks(css=CSS, title="Image-Talk", analytics_enabled=False) as demo:
                     ed_text = gr.Textbox(label="", lines=8,
                         placeholder="Transcript appears here after extraction…")
                     with gr.Row():
-                        ed_method = gr.Radio(["LatentSync (best)", "Wav2Lip (fast)"],
-                                             value="LatentSync (best)", label="Lip-sync")
+                        ed_method = gr.Radio(
+                            ["LatentSync (best)", "MuseTalk (sharp)", "Wav2Lip (fast)"],
+                            value="LatentSync (best)", label="Lip-sync")
                         ed_steps  = gr.Slider(10, 50, value=20, step=1,
                                               label="Diffusion steps")
                         ed_guid   = gr.Slider(1.0, 3.0, value=1.5, step=0.1,

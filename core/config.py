@@ -28,6 +28,11 @@ for _d in (MODEL_ROOT, OUTPUTS_DIR, UPLOADS_DIR, THIRD_PARTY, VENV_ROOT):
 SADTALKER_DIR  = os.path.join(THIRD_PARTY, "SadTalker")
 WAV2LIP_DIR    = os.path.join(THIRD_PARTY, "Wav2Lip")
 LATENTSYNC_DIR = os.path.join(THIRD_PARTY, "LatentSync")
+MUSETALK_DIR   = os.path.join(THIRD_PARTY, "MuseTalk")
+
+# MuseTalk v1.5 weights live under its repo models/ (download_weights.sh).
+MUSETALK_UNET        = os.path.join(MUSETALK_DIR, "models", "musetalkV15", "unet.pth")
+MUSETALK_UNET_CONFIG = os.path.join(MUSETALK_DIR, "models", "musetalkV15", "musetalk.json")
 
 # ── Model weight paths ──────────────────────────────────────────────────────
 # Text → image
@@ -63,6 +68,7 @@ VENV_VOICE_PY      = _venv_python("venv_voice")
 VENV_SADTALKER_PY  = _venv_python("venv_sadtalker")
 VENV_LATENTSYNC_PY = _venv_python("venv_latentsync")
 VENV_LTX_PY        = _venv_python("venv_ltx")
+VENV_MUSETALK_PY   = _venv_python("venv_musetalk")
 
 # LTX-Video 0.9.7-distilled (Lightricks) text -> video. Open (no token), fast
 # few-step. Runs in its own venv (built by setup/make_ltx_venv.sh).

@@ -5,6 +5,7 @@ from engines.talkingface_engine import TalkingFaceEngine
 from engines.lipsync_engine import LipSyncEngine
 from engines.transcript_engine import TranscriptEngine
 from engines.ltx_engine import LTXEngine
+from engines.musetalk_engine import MuseTalkEngine
 
 ENGINES = {
     "diffusion":   DiffusionEngine(),
@@ -14,4 +15,5 @@ ENGINES = {
     "lipsync":     LipSyncEngine(),
     "transcript":  TranscriptEngine(),
     "ltx":         LTXEngine(),
+    "musetalk":    MuseTalkEngine(),
 }

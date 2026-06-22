@@ -1,0 +1,8 @@
+# venv_musetalk extras. MuseTalk's own requirements.txt (in its repo) covers
+# the rest; the mmlab stack (mmcv/mmdet/mmpose) is installed via mim in
+# setup/make_musetalk_venv.sh. torch is installed there too.
+setuptools<81
+huggingface_hub
+gdown
+requests
+omegaconf
