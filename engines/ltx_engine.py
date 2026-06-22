@@ -14,8 +14,8 @@ WORKER = os.path.join(PROJECT_ROOT, "workers", "ltx_worker.py")
 class LTXEngine(BaseEngine):
 
     def run(self, prompt, negative_prompt="", image_path=None,
-            width=768, height=512, num_frames=121,
-            steps=40, guidance=4.0, fps=24):
+            width=704, height=512, num_frames=121,
+            steps=7, guidance=1.0, fps=24):
         if not prompt or not prompt.strip():
             raise ValueError("Prompt cannot be empty.")
         if not os.path.exists(VENV_LTX_PY):

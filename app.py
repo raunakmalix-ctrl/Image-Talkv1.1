@@ -174,12 +174,12 @@ def run_faceswap(source, mode, target_img, target_vid, enhance,
         return None, None, err(str(e))
 
 
-def run_ltx(prompt, negative, image, width, height, num_frames, steps, guidance):
+def run_ltx(prompt, negative, width, height, num_frames, steps, guidance):
     if not prompt or not prompt.strip():
         return None, warn("Prompt required")
     try:
         free_inprocess()
-        out = ltx.run(prompt=prompt, negative_prompt=negative, image_path=image,
+        out = ltx.run(prompt=prompt, negative_prompt=negative,
                       width=int(width), height=int(height),
                       num_frames=int(num_frames), steps=int(steps),
                       guidance=float(guidance))
@@ -330,33 +330,31 @@ with gr.Blocks(css=CSS, title="Image-Talk", analytics_enabled=False) as demo:
                          [fs_src, fs_mode, fs_timg, fs_tvid, fs_enh],
                          [fs_oimg, fs_ovid, fs_status])
 
-        # ── 05 Text → Video (LTX-2) ──────────────────────────────────────────
+        # ── 05 Text → Video (LTX-0.9.7-distilled) ────────────────────────────
         with gr.Tab("05 · Text → Video"):
             with gr.Row(equal_height=False):
                 with gr.Column(scale=1):
-                    gr.HTML("<div class='section-label'>LTX-2 Video "
-                            "(needs the optional venv_ltx — see notebook)</div>")
+                    gr.HTML("<div class='section-label'>LTX-Video 0.9.7-distilled "
+                            "(open · needs the optional venv_ltx — see notebook)</div>")
                     lx_prompt = gr.Textbox(label="Prompt", lines=3,
                         placeholder="A cinematic drone shot over snowy mountains at sunrise…")
                     lx_neg = gr.Textbox(label="Negative prompt", lines=1,
                         value="shaky, glitchy, low quality, watermark")
-                    lx_img = gr.Image(label="Optional start image (image→video)",
-                                      type="filepath", elem_classes=["output-media"])
                     with gr.Row():
-                        lx_w = gr.Slider(384, 1280, value=768, step=32, label="Width")
+                        lx_w = gr.Slider(384, 1280, value=704, step=32, label="Width")
                         lx_h = gr.Slider(384, 1280, value=512, step=32, label="Height")
                     with gr.Row():
                         lx_frames = gr.Slider(49, 193, value=121, step=8,
                                               label="Frames (~fps·sec)")
-                        lx_steps  = gr.Slider(10, 50, value=40, step=1, label="Steps")
-                        lx_guid   = gr.Slider(1.0, 8.0, value=4.0, step=0.5, label="Guidance")
+                        lx_steps  = gr.Slider(4, 30, value=7, step=1, label="Steps")
+                        lx_guid   = gr.Slider(1.0, 5.0, value=1.0, step=0.5, label="Guidance")
                     lx_btn = gr.Button("▶  Generate Video", variant="primary")
                 with gr.Column(scale=1):
                     gr.HTML("<div class='section-label'>Output</div>")
                     lx_out = gr.Video(label="", elem_classes=["output-media"])
                     lx_status = gr.HTML(ok("Ready"))
             lx_btn.click(run_ltx,
-                         [lx_prompt, lx_neg, lx_img, lx_w, lx_h,
+                         [lx_prompt, lx_neg, lx_w, lx_h,
                           lx_frames, lx_steps, lx_guid],
                          [lx_out, lx_status])
 
