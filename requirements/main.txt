@@ -33,6 +33,9 @@ faster-whisper
 pydub
 soundfile
 imageio-ffmpeg
+# Media Studio: background removal (CPU onnx, downloads u2net on first use)
+rembg
+onnxruntime
 # Exact pin: has HfFolder (for gradio) and works with diffusers 0.31 / transformers 4.44.
 huggingface_hub==0.25.2
 

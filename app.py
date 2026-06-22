@@ -37,6 +37,7 @@ except Exception:
 from core.engine_registry import ENGINES
 from core.model_manager import vram_status
 from core.utils import audio_duration
+from core.config import OUTPUTS_DIR
 
 diffusion   = ENGINES["diffusion"]
 faceswap    = ENGINES["faceswap"]
@@ -45,6 +46,7 @@ talkingface = ENGINES["talkingface"]
 transcript  = ENGINES["transcript"]
 ltx         = ENGINES["ltx"]
 musetalk    = ENGINES["musetalk"]
+media       = ENGINES["media"]
 
 LANGS = {"English": "en", "Hindi": "hi"}
 
@@ -213,6 +215,50 @@ def audio_info(path):
     return f"<div class='audio-info'>▶ {m}m {s:02d}s reference</div>"
 
 
+# ── Media Studio callbacks (all ffmpeg/CPU) ─────────────────────────────────
+def _media(fn, *a):
+    try:
+        return fn(*a), ok("Done")
+    except Exception as e:
+        return None, err(str(e))
+
+def m_trim_video(v, s, e): return _media(media.trim_video, v, s, e)
+def m_trim_audio(a, s, e): return _media(media.trim_audio, a, s, e)
+def m_grab(v, t):          return _media(media.grab_frame, v, t)
+def m_clean(a):            return _media(media.clean_audio, a)
+def m_convert(f, t):       return _media(media.convert, f, t)
+def m_resize(v, w, h):     return _media(media.resize_video, v, w, h)
+def m_gif(v, fps, w):      return _media(media.to_gif, v, fps, w)
+def m_caption(v):          return _media(media.burn_captions, v)
+def m_removebg(img, bg):   return _media(media.remove_bg, img, bg)
+
+def m_merge(files, kind):
+    try:
+        paths = [f.name if hasattr(f, "name") else f for f in (files or [])]
+        return media.concat(paths, "video" if kind == "Video" else "audio"), ok("Merged")
+    except Exception as e:
+        return None, err(str(e))
+
+
+# ── Output history ──────────────────────────────────────────────────────────
+def list_outputs():
+    import glob
+    files = [f for f in glob.glob(os.path.join(OUTPUTS_DIR, "*")) if os.path.isfile(f)]
+    return sorted(files, key=os.path.getmtime, reverse=True)[:60]
+
+def zip_outputs():
+    import glob, zipfile, tempfile, time as _t
+    files = [f for f in glob.glob(os.path.join(OUTPUTS_DIR, "*")) if os.path.isfile(f)]
+    if not files:
+        return None
+    zpath = os.path.join(tempfile.gettempdir(),
+                         _t.strftime("image_talk_outputs_%Y%m%d_%H%M%S.zip"))
+    with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
+        for f in files:
+            z.write(f, os.path.basename(f))
+    return zpath
+
+
 # ════════════════════════════════════════════════════════════════════════════
 #  UI
 # ════════════════════════════════════════════════════════════════════════════
@@ -222,10 +268,10 @@ with gr.Blocks(css=CSS, title="Image-Talk", analytics_enabled=False) as demo:
     gr.HTML(f"<script>{THEME_JS}</script>")
     gr.HTML(MASTHEAD)
 
-    with gr.Tabs():
+    with gr.Tabs() as tabs:
 
         # ── 01 Talking Video ────────────────────────────────────────────────
-        with gr.Tab("01 · Talking Video"):
+        with gr.Tab("01 · Talking Video", id=0):
             with gr.Row(equal_height=False):
                 with gr.Column(scale=1):
                     gr.HTML("<div class='section-label'>Portrait &amp; Voice</div>")
@@ -261,7 +307,7 @@ with gr.Blocks(css=CSS, title="Image-Talk", analytics_enabled=False) as demo:
                          [tv_out, tv_status])
 
         # ── 02 Edit & Relip ─────────────────────────────────────────────────
-        with gr.Tab("02 · Edit & Relip"):
+        with gr.Tab("02 · Edit & Relip", id=1):
             ed_state = gr.State(None)
             with gr.Row(equal_height=False):
                 with gr.Column(scale=1):
@@ -292,7 +338,7 @@ with gr.Blocks(css=CSS, title="Image-Talk", analytics_enabled=False) as demo:
                            [ed_out, ed_status])
 
         # ── 03 Text → Image ─────────────────────────────────────────────────
-        with gr.Tab("03 · Text → Image"):
+        with gr.Tab("03 · Text → Image", id=2):
             with gr.Row(equal_height=False):
                 with gr.Column(scale=1):
                     gr.HTML("<div class='section-label'>Prompt</div>")
@@ -318,7 +364,7 @@ with gr.Blocks(css=CSS, title="Image-Talk", analytics_enabled=False) as demo:
                          [ti_out, ti_status])
 
         # ── 04 Face Swap ────────────────────────────────────────────────────
-        with gr.Tab("04 · Face Swap"):
+        with gr.Tab("04 · Face Swap", id=3):
             with gr.Row(equal_height=False):
                 with gr.Column(scale=1):
                     gr.HTML("<div class='section-label'>Source &amp; Target</div>")
@@ -345,7 +391,7 @@ with gr.Blocks(css=CSS, title="Image-Talk", analytics_enabled=False) as demo:
                          [fs_oimg, fs_ovid, fs_status])
 
         # ── 05 Text → Video (LTX-0.9.7-distilled) ────────────────────────────
-        with gr.Tab("05 · Text → Video"):
+        with gr.Tab("05 · Text → Video", id=4):
             with gr.Row(equal_height=False):
                 with gr.Column(scale=1):
                     gr.HTML("<div class='section-label'>LTX-Video 0.9.7-distilled "
@@ -371,6 +417,159 @@ with gr.Blocks(css=CSS, title="Image-Talk", analytics_enabled=False) as demo:
                          [lx_prompt, lx_neg, lx_w, lx_h,
                           lx_frames, lx_steps, lx_guid],
                          [lx_out, lx_status])
+
+        # ── 06 Media Studio (ffmpeg/CPU — no GPU cost) ───────────────────────
+        with gr.Tab("06 · Media Studio", id=5):
+            gr.HTML("<div class='section-label'>Prep your media — free (no A100). "
+                    "Use the “→ Send to” buttons to push results into the AI tabs.</div>")
+
+            with gr.Accordion("✂  Trim video", open=True):
+                with gr.Row():
+                    with gr.Column():
+                        ms_tv_in = gr.Video(label="Video", elem_classes=["output-media"])
+                        with gr.Row():
+                            ms_tv_s = gr.Number(label="Start (sec)", value=0)
+                            ms_tv_e = gr.Number(label="End (sec)", value=0)
+                        ms_tv_btn = gr.Button("Trim", variant="primary")
+                    with gr.Column():
+                        ms_tv_out = gr.Video(label="Trimmed", elem_classes=["output-media"])
+                        ms_tv_st = gr.HTML("")
+                        with gr.Row():
+                            ms_tv_send_relip = gr.Button("→ Edit & Relip", size="sm")
+                ms_tv_btn.click(m_trim_video, [ms_tv_in, ms_tv_s, ms_tv_e],
+                                [ms_tv_out, ms_tv_st])
+
+            with gr.Accordion("✂  Trim audio", open=False):
+                with gr.Row():
+                    with gr.Column():
+                        ms_ta_in = gr.Audio(label="Audio", type="filepath")
+                        with gr.Row():
+                            ms_ta_s = gr.Number(label="Start (sec)", value=0)
+                            ms_ta_e = gr.Number(label="End (sec)", value=0)
+                        ms_ta_btn = gr.Button("Trim", variant="primary")
+                    with gr.Column():
+                        ms_ta_out = gr.Audio(label="Trimmed", type="filepath")
+                        ms_ta_st = gr.HTML("")
+                        ms_ta_send_voice = gr.Button("→ Talking Video voice", size="sm")
+                ms_ta_btn.click(m_trim_audio, [ms_ta_in, ms_ta_s, ms_ta_e],
+                                [ms_ta_out, ms_ta_st])
+
+            with gr.Accordion("🎞  Grab frame → portrait", open=False):
+                with gr.Row():
+                    with gr.Column():
+                        ms_gf_in = gr.Video(label="Video", elem_classes=["output-media"])
+                        ms_gf_t = gr.Number(label="Time (sec)", value=0)
+                        ms_gf_btn = gr.Button("Capture frame", variant="primary")
+                    with gr.Column():
+                        ms_gf_out = gr.Image(label="Frame", type="filepath",
+                                             elem_classes=["output-media"])
+                        ms_gf_st = gr.HTML("")
+                        with gr.Row():
+                            ms_gf_send_portrait = gr.Button("→ Talking Video portrait", size="sm")
+                            ms_gf_send_face = gr.Button("→ Face Swap source", size="sm")
+                ms_gf_btn.click(m_grab, [ms_gf_in, ms_gf_t], [ms_gf_out, ms_gf_st])
+
+            with gr.Accordion("🎧  Clean audio for voice cloning", open=False):
+                with gr.Row():
+                    with gr.Column():
+                        ms_ca_in = gr.Audio(label="Audio or video", type="filepath")
+                        ms_ca_btn = gr.Button("Denoise + normalize", variant="primary")
+                    with gr.Column():
+                        ms_ca_out = gr.Audio(label="Cleaned", type="filepath")
+                        ms_ca_st = gr.HTML("")
+                        ms_ca_send_voice = gr.Button("→ Talking Video voice", size="sm")
+                ms_ca_btn.click(m_clean, [ms_ca_in], [ms_ca_out, ms_ca_st])
+
+            with gr.Accordion("🪄  Remove background (portrait)", open=False):
+                with gr.Row():
+                    with gr.Column():
+                        ms_bg_in = gr.Image(label="Portrait", type="filepath",
+                                            elem_classes=["output-media"])
+                        ms_bg_color = gr.Radio(["white", "green", "gray", "black"],
+                                               value="white", label="New background")
+                        ms_bg_btn = gr.Button("Remove background", variant="primary")
+                    with gr.Column():
+                        ms_bg_out = gr.Image(label="Result", type="filepath",
+                                             elem_classes=["output-media"])
+                        ms_bg_st = gr.HTML("")
+                        with gr.Row():
+                            ms_bg_send_portrait = gr.Button("→ Talking Video portrait", size="sm")
+                            ms_bg_send_face = gr.Button("→ Face Swap source", size="sm")
+                ms_bg_btn.click(m_removebg, [ms_bg_in, ms_bg_color], [ms_bg_out, ms_bg_st])
+
+            with gr.Accordion("💬  Burn captions onto video", open=False):
+                with gr.Row():
+                    with gr.Column():
+                        ms_cap_in = gr.Video(label="Video", elem_classes=["output-media"])
+                        ms_cap_btn = gr.Button("Transcribe + burn subtitles",
+                                               variant="primary")
+                    with gr.Column():
+                        ms_cap_out = gr.Video(label="Captioned", elem_classes=["output-media"])
+                        ms_cap_st = gr.HTML("")
+                ms_cap_btn.click(m_caption, [ms_cap_in], [ms_cap_out, ms_cap_st])
+
+            with gr.Accordion("🔁  Convert · compress · resize · GIF", open=False):
+                with gr.Row():
+                    with gr.Column():
+                        ms_cv_in = gr.File(label="File")
+                        ms_cv_target = gr.Dropdown(
+                            ["MP4 (H.264)", "Compress MP4", "MP3", "WAV"],
+                            value="Compress MP4", label="Convert to")
+                        ms_cv_btn = gr.Button("Convert", variant="primary")
+                        gr.HTML("<div class='section-label'>Resize / GIF (video)</div>")
+                        ms_rs_in = gr.Video(label="Video", elem_classes=["output-media"])
+                        with gr.Row():
+                            ms_rs_w = gr.Number(label="Width", value=720)
+                            ms_rs_h = gr.Number(label="Height", value=1280)
+                        ms_rs_btn = gr.Button("Resize", size="sm")
+                        with gr.Row():
+                            ms_gif_fps = gr.Slider(5, 24, value=12, step=1, label="GIF fps")
+                            ms_gif_w = gr.Slider(240, 720, value=480, step=20, label="GIF width")
+                        ms_gif_btn = gr.Button("Export GIF", size="sm")
+                    with gr.Column():
+                        ms_cv_out = gr.File(label="Output")
+                        ms_cv_st = gr.HTML("")
+                        ms_rs_out = gr.Video(label="Resized", elem_classes=["output-media"])
+                        ms_gif_out = gr.File(label="GIF")
+                ms_cv_btn.click(m_convert, [ms_cv_in, ms_cv_target], [ms_cv_out, ms_cv_st])
+                ms_rs_btn.click(m_resize, [ms_rs_in, ms_rs_w, ms_rs_h], [ms_rs_out, ms_cv_st])
+                ms_gif_btn.click(m_gif, [ms_rs_in, ms_gif_fps, ms_gif_w], [ms_gif_out, ms_cv_st])
+
+            with gr.Accordion("➕  Merge clips", open=False):
+                with gr.Row():
+                    with gr.Column():
+                        ms_mg_in = gr.File(label="Files (2+)", file_count="multiple")
+                        ms_mg_kind = gr.Radio(["Video", "Audio"], value="Video", label="Type")
+                        ms_mg_btn = gr.Button("Merge", variant="primary")
+                    with gr.Column():
+                        ms_mg_out = gr.File(label="Merged")
+                        ms_mg_st = gr.HTML("")
+                ms_mg_btn.click(m_merge, [ms_mg_in, ms_mg_kind], [ms_mg_out, ms_mg_st])
+
+            with gr.Accordion("🗂  Output history", open=False):
+                with gr.Row():
+                    ms_hist_refresh = gr.Button("Refresh", size="sm")
+                    ms_hist_zip_btn = gr.Button("Download all (zip)", size="sm")
+                ms_hist = gr.Files(label="This session's outputs")
+                ms_hist_zip = gr.File(label="Zip")
+                ms_hist_refresh.click(list_outputs, outputs=ms_hist)
+                ms_hist_zip_btn.click(zip_outputs, outputs=ms_hist_zip)
+
+            # ── Send-to wiring (set target value + switch tab) ───────────────
+            ms_tv_send_relip.click(lambda p: (p, gr.Tabs(selected=1)),
+                                   [ms_tv_out], [ed_video, tabs])
+            ms_ta_send_voice.click(lambda p: (p, gr.Tabs(selected=0)),
+                                   [ms_ta_out], [tv_audio, tabs])
+            ms_ca_send_voice.click(lambda p: (p, gr.Tabs(selected=0)),
+                                   [ms_ca_out], [tv_audio, tabs])
+            ms_gf_send_portrait.click(lambda p: (p, gr.Tabs(selected=0)),
+                                      [ms_gf_out], [tv_img, tabs])
+            ms_gf_send_face.click(lambda p: (p, gr.Tabs(selected=3)),
+                                  [ms_gf_out], [fs_src, tabs])
+            ms_bg_send_portrait.click(lambda p: (p, gr.Tabs(selected=0)),
+                                      [ms_bg_out], [tv_img, tabs])
+            ms_bg_send_face.click(lambda p: (p, gr.Tabs(selected=3)),
+                                  [ms_bg_out], [fs_src, tabs])
 
     vram = gr.HTML(vram_html())
     for b in [tv_btn, ed_relip, ti_btn, fs_btn, lx_btn]:
