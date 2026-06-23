@@ -47,6 +47,9 @@ transcript  = ENGINES["transcript"]
 ltx         = ENGINES["ltx"]
 musetalk    = ENGINES["musetalk"]
 media       = ENGINES["media"]
+avatar      = ENGINES["avatar"]
+
+from engines.voice_engine import PRESET_VOICES   # noqa: E402
 
 LANGS = {"English": "en", "Hindi": "hi"}
 
@@ -162,6 +165,54 @@ def run_txt2img(prompt, variant, negative, width, height, steps, guidance, seed)
         return out, ok(os.path.basename(out))
     except Exception as e:
         return None, err(str(e))
+
+
+# ── Avatar Studio (Tier A: InstantID identity → voice → talking video) ──────
+def run_avatar(photos, video, scene_prompt, speak_text, language, voice_mode,
+               preset, ref_audio, anim_engine, steps, guidance, seed,
+               progress=gr.Progress()):
+    if not scene_prompt or not scene_prompt.strip():
+        return None, None, warn("Describe the portrait/scene")
+    if not speak_text or not speak_text.strip():
+        return None, None, warn("Enter what the person should say")
+    try:
+        free_inprocess()
+        # 1. gather identity photos
+        imgs = [f.name if hasattr(f, "name") else f for f in (photos or [])]
+        if video:
+            progress(0.1, desc="Sampling frames from video ...")
+            imgs = imgs + avatar.extract_frames(video, n=8)
+        if not imgs:
+            return None, None, warn("Upload photos or a video of the person")
+
+        # 2. identity portrait (InstantID)
+        progress(0.25, desc="Building identity portrait (InstantID) ...")
+        portrait = avatar.build_portrait(imgs, scene_prompt, steps=int(steps),
+                                         guidance=float(guidance), seed=int(seed))
+
+        # 3. voice
+        progress(0.6, desc="Synthesizing voice ...")
+        avatar.unload()   # free InstantID before the voice/animation subprocesses
+        free_inprocess()
+        lang = LANGS.get(language, "en")
+        if voice_mode.startswith("Preset"):
+            wav = voice.run(text=speak_text, speaker=PRESET_VOICES.get(preset),
+                            language=lang)
+        else:
+            if ref_audio is None:
+                return None, None, warn("Upload/record a voice to clone, or pick Preset")
+            wav = voice.run(text=speak_text, reference_audio_path=ref_audio, language=lang)
+
+        # 4. animate
+        progress(0.8, desc="Animating ...")
+        if anim_engine.startswith("MuseTalk"):
+            out = musetalk.run(face_path=portrait, audio_path=wav)
+        else:
+            out = talkingface.run(portrait_path=portrait, audio_path=wav,
+                                  size=512, preprocess="full")
+        return portrait, out, ok(os.path.basename(out))
+    except Exception as e:
+        return None, None, err(str(e))
 
 
 # ── Image Edit (FLUX.1-Kontext-dev) ─────────────────────────────────────────
@@ -622,8 +673,60 @@ with gr.Blocks(css=CSS, title="Image-Talk", analytics_enabled=False) as demo:
             ie_btn.click(run_edit, [ie_img, ie_prompt, ie_steps, ie_guid, ie_seed],
                          [ie_out, ie_status])
 
+        # ── 08 Avatar Studio (photos → talking video) ────────────────────────
+        with gr.Tab("08 · Avatar Studio", id=7):
+            with gr.Row(equal_height=False):
+                with gr.Column(scale=1):
+                    gr.HTML("<div class='section-label'>1 · Identity "
+                            "(5–12 photos, or a short video)</div>")
+                    av_photos = gr.Files(label="Photos of the person",
+                                         file_count="multiple")
+                    av_video = gr.Video(label="…or a short video",
+                                        elem_classes=["output-media"])
+                    gr.HTML("<div class='section-label'>2 · Look &amp; script</div>")
+                    av_scene = gr.Textbox(label="Portrait / scene prompt", lines=2,
+                        placeholder="professional headshot, studio lighting, navy suit")
+                    av_text = gr.Textbox(label="What should the person say", lines=3,
+                        placeholder="Type the speech (English or Hindi)…")
+                    av_lang = gr.Radio(["English", "Hindi"], value="English",
+                                       label="Language")
+                    gr.HTML("<div class='section-label'>3 · Voice</div>")
+                    av_voicemode = gr.Radio(["Preset voice", "Clone from audio"],
+                                            value="Preset voice", label="Voice source")
+                    av_preset = gr.Dropdown(list(PRESET_VOICES.keys()),
+                                            value=list(PRESET_VOICES.keys())[0],
+                                            label="Preset voice", visible=True)
+                    av_ref = gr.Audio(label="Record or upload a voice to clone",
+                                      type="filepath", sources=["upload", "microphone"],
+                                      visible=False)
+                    av_engine = gr.Radio(
+                        ["SadTalker (head motion)", "MuseTalk (sharp lips)"],
+                        value="SadTalker (head motion)", label="Animation")
+                    with gr.Row():
+                        av_steps = gr.Slider(20, 40, value=30, step=1, label="ID steps")
+                        av_guid  = gr.Slider(1.0, 9.0, value=5.0, step=0.5, label="ID guidance")
+                        av_seed  = gr.Number(label="Seed (−1)", value=-1, precision=0)
+                    av_btn = gr.Button("▶  Generate Avatar Video", variant="primary")
+                with gr.Column(scale=1):
+                    gr.HTML("<div class='section-label'>Identity portrait</div>")
+                    av_portrait = gr.Image(label="", elem_classes=["output-media"])
+                    gr.HTML("<div class='section-label'>Talking video</div>")
+                    av_out = gr.Video(label="", elem_classes=["output-media"])
+                    av_status = gr.HTML(ok("Ready"))
+
+            def _toggle_voice(mode):
+                preset = mode.startswith("Preset")
+                return gr.update(visible=preset), gr.update(visible=not preset)
+            av_voicemode.change(_toggle_voice, [av_voicemode], [av_preset, av_ref])
+
+            av_btn.click(run_avatar,
+                         [av_photos, av_video, av_scene, av_text, av_lang,
+                          av_voicemode, av_preset, av_ref, av_engine,
+                          av_steps, av_guid, av_seed],
+                         [av_portrait, av_out, av_status])
+
     vram = gr.HTML(vram_html())
-    for b in [tv_btn, ed_relip, ti_btn, fs_btn, lx_btn, ie_btn]:
+    for b in [tv_btn, ed_relip, ti_btn, fs_btn, lx_btn, ie_btn, av_btn]:
         b.click(vram_html, outputs=vram)
 
 

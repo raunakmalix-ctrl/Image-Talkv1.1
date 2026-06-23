@@ -16,7 +16,8 @@ from core.subprocess_runner import read_args, emit_result   # noqa: E402
 def main():
     args = read_args()
     text     = args["text"]
-    ref      = args["reference_audio"]
+    ref      = args.get("reference_audio")
+    speaker  = args.get("speaker")          # built-in XTTS voice name (preset)
     language = args.get("language", "en")
     xtts_dir = args["xtts_dir"]
     out_path = args["out_path"]
@@ -35,10 +36,17 @@ def main():
     if device != "cpu":
         model.to(device)
 
-    print("[voice_worker] Computing speaker latents ...", flush=True)
-    gpt_cond_latent, speaker_embedding = model.get_conditioning_latents(
-        audio_path=[ref], gpt_cond_len=30, max_ref_length=60, sound_norm_refs=False
-    )
+    if speaker:
+        # Preset voice — use XTTS's built-in speaker, no reference audio.
+        print(f"[voice_worker] Preset voice: {speaker}", flush=True)
+        data = model.speaker_manager.speakers[speaker]
+        gpt_cond_latent = data["gpt_cond_latent"]
+        speaker_embedding = data["speaker_embedding"]
+    else:
+        print("[voice_worker] Computing speaker latents (clone) ...", flush=True)
+        gpt_cond_latent, speaker_embedding = model.get_conditioning_latents(
+            audio_path=[ref], gpt_cond_len=30, max_ref_length=60, sound_norm_refs=False
+        )
 
     print(f"[voice_worker] Synthesizing ({language}) ...", flush=True)
     result = model.inference(

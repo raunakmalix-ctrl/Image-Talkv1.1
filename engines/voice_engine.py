@@ -17,13 +17,25 @@ WORKER = os.path.join(PROJECT_ROOT, "workers", "voice_worker.py")
 SUPPORTED_LANGUAGES = {"English": "en", "Hindi": "hi"}
 
 
+# A few built-in XTTS-v2 preset voices (male / female).
+PRESET_VOICES = {
+    "Female · Claribel": "Claribel Dervla",
+    "Female · Daisy":    "Daisy Studious",
+    "Female · Gracie":   "Gracie Wise",
+    "Male · Andrew":     "Andrew Chipper",
+    "Male · Damien":     "Damien Black",
+    "Male · Viktor":     "Viktor Eka",
+}
+
+
 class VoiceEngine(BaseEngine):
 
-    def run(self, text, reference_audio_path, language="en"):
+    def run(self, text, reference_audio_path=None, language="en", speaker=None):
         if not text or not text.strip():
             raise ValueError("Text cannot be empty.")
-        if not os.path.exists(reference_audio_path):
-            raise FileNotFoundError(f"Reference audio not found: {reference_audio_path}")
+        if not speaker:
+            if not reference_audio_path or not os.path.exists(reference_audio_path):
+                raise FileNotFoundError("Provide a reference audio to clone, or pick a preset voice.")
 
         out_path = timestamp_file("voice", "wav")
         return run_worker(
@@ -31,6 +43,7 @@ class VoiceEngine(BaseEngine):
             {
                 "text": text,
                 "reference_audio": reference_audio_path,
+                "speaker": speaker,
                 "language": language,
                 "xtts_dir": XTTS_DIR,
                 "out_path": out_path,

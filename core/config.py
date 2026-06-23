@@ -30,6 +30,10 @@ WAV2LIP_DIR    = os.path.join(THIRD_PARTY, "Wav2Lip")
 LATENTSYNC_DIR = os.path.join(THIRD_PARTY, "LatentSync")
 MUSETALK_DIR   = os.path.join(THIRD_PARTY, "MuseTalk")
 CODEFORMER_DIR = os.path.join(THIRD_PARTY, "CodeFormer")
+INSTANTID_DIR  = os.path.join(THIRD_PARTY, "InstantID")   # pipeline code
+
+# Avatar Studio (InstantID) — identity from photos. Runs in the main env.
+INSTANTID_MODELS = os.path.join(MODEL_ROOT, "instantid")  # ip-adapter.bin + ControlNetModel/
 
 # MuseTalk v1.5 weights live under its repo models/ (download_weights.sh).
 MUSETALK_UNET        = os.path.join(MUSETALK_DIR, "models", "musetalkV15", "unet.pth")

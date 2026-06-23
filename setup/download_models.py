@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.config import (
     MODEL_ROOT, XTTS_DIR, INSIGHTFACE_ROOT, INSWAPPER_PATH, GFPGAN_PATH,
-    WAV2LIP_CKPT, SADTALKER_DIR, LATENTSYNC_DIR,
+    WAV2LIP_CKPT, SADTALKER_DIR, LATENTSYNC_DIR, INSTANTID_MODELS,
 )
 
 # Empty string -> None, otherwise hf_hub builds an illegal "Bearer " header.
@@ -100,8 +100,18 @@ def latentsync():
     _hf_snapshot("ByteDance/LatentSync-1.5", ckpt_dir)
 
 
+def instantid():
+    # Avatar Studio: InstantID ip-adapter + ControlNet. antelopev2 detector
+    # auto-downloads via insightface on first Avatar run.
+    if os.path.exists(os.path.join(INSTANTID_MODELS, "ip-adapter.bin")):
+        print("  exists"); return
+    _hf_snapshot("InstantX/InstantID", INSTANTID_MODELS,
+                 allow_patterns=["ip-adapter.bin", "ControlNetModel/*"])
+
+
 def main():
     step("XTTS-v2 (voice clone)", xtts)
+    step("InstantID (avatar identity)", instantid)
     step("inswapper_128 (face swap)", inswapper)
     step("GFPGAN v1.4 (enhance)", gfpgan)
     step("Wav2Lip GAN (lip-sync fallback)", wav2lip)

@@ -19,6 +19,7 @@ clone https://github.com/Rudrabha/Wav2Lip.git          "$THIRD_PARTY/Wav2Lip"
 clone https://github.com/bytedance/LatentSync.git       "$THIRD_PARTY/LatentSync"
 clone https://github.com/TMElyralab/MuseTalk.git        "$THIRD_PARTY/MuseTalk"
 clone https://github.com/sczhou/CodeFormer.git          "$THIRD_PARTY/CodeFormer"
+clone https://github.com/instantX-research/InstantID.git "$THIRD_PARTY/InstantID"
 
 echo "==> pip: main requirements"
 pip install -q -r "$ROOT/requirements/main.txt"
