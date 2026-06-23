@@ -164,6 +164,21 @@ def run_txt2img(prompt, variant, negative, width, height, steps, guidance, seed)
         return None, err(str(e))
 
 
+# ── Image Edit (FLUX.1-Kontext-dev) ─────────────────────────────────────────
+def run_edit(image, prompt, steps, guidance, seed):
+    if image is None:
+        return None, warn("Upload an image to edit")
+    if not prompt or not prompt.strip():
+        return None, warn("Describe the edit")
+    try:
+        free_inprocess()
+        out = diffusion.edit(image_path=image, prompt=prompt,
+                             steps=int(steps), guidance=float(guidance), seed=int(seed))
+        return out, ok(os.path.basename(out))
+    except Exception as e:
+        return None, err(str(e))
+
+
 # ── Feature 4: Face swap ────────────────────────────────────────────────────
 def run_faceswap(source, mode, target_img, target_vid, enhancer,
                  progress=gr.Progress()):
@@ -584,8 +599,31 @@ with gr.Blocks(css=CSS, title="Image-Talk", analytics_enabled=False) as demo:
             ms_bg_send_face.click(lambda p: (p, gr.Tabs(selected=3)),
                                   [ms_bg_out], [fs_src, tabs])
 
+        # ── 07 Image Edit (FLUX.1-Kontext-dev) ───────────────────────────────
+        with gr.Tab("07 · Image Edit", id=6):
+            with gr.Row(equal_height=False):
+                with gr.Column(scale=1):
+                    gr.HTML("<div class='section-label'>Instruction editing "
+                            "(FLUX-Kontext · needs HF_TOKEN + license)</div>")
+                    ie_img = gr.Image(label="Image to edit", type="filepath",
+                                      elem_classes=["output-media"])
+                    ie_prompt = gr.Textbox(label="Edit instruction", lines=3,
+                        placeholder="e.g. change the background to a sunset beach; "
+                                    "make it black-and-white; add sunglasses")
+                    with gr.Row():
+                        ie_steps = gr.Slider(10, 40, value=28, step=1, label="Steps")
+                        ie_guid  = gr.Slider(1.0, 5.0, value=2.5, step=0.5, label="Guidance")
+                    ie_seed = gr.Number(label="Seed (−1 = random)", value=-1, precision=0)
+                    ie_btn  = gr.Button("▶  Apply Edit", variant="primary")
+                with gr.Column(scale=1):
+                    gr.HTML("<div class='section-label'>Output</div>")
+                    ie_out = gr.Image(label="", elem_classes=["output-media"])
+                    ie_status = gr.HTML(ok("Ready"))
+            ie_btn.click(run_edit, [ie_img, ie_prompt, ie_steps, ie_guid, ie_seed],
+                         [ie_out, ie_status])
+
     vram = gr.HTML(vram_html())
-    for b in [tv_btn, ed_relip, ti_btn, fs_btn, lx_btn]:
+    for b in [tv_btn, ed_relip, ti_btn, fs_btn, lx_btn, ie_btn]:
         b.click(vram_html, outputs=vram)
 
 

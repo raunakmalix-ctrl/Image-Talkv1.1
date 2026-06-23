@@ -15,7 +15,7 @@ from core.base_engine import BaseEngine
 from core.model_manager import load_model, unload_model
 from core.utils import timestamp_file
 from core.device import DEVICE
-from core.config import FLUX_DEV_REPO, FLUX_SCHNELL_REPO
+from core.config import FLUX_DEV_REPO, FLUX_SCHNELL_REPO, FLUX_KONTEXT_REPO
 
 SDXL_REPO      = "stabilityai/stable-diffusion-xl-base-1.0"
 SDXL_REAL_REPO = "SG161222/RealVisXL_V5.0"   # photoreal SDXL, diffusers format
@@ -76,8 +76,52 @@ class DiffusionEngine(BaseEngine):
         return self.pipe
 
     def unload(self):
-        for variant in ("sdxl_real", "sdxl", "dev", "schnell"):
+        for variant in ("sdxl_real", "sdxl", "dev", "schnell", "kontext"):
             unload_model(f"img_{variant}")
+
+    # ── Instruction-based image editing (FLUX.1-Kontext-dev, gated) ──────────
+    def edit(self, image_path, prompt, steps=28, guidance=2.5, seed=-1):
+        if not image_path:
+            raise ValueError("Upload an image to edit.")
+        if not prompt or not prompt.strip():
+            raise ValueError("Describe the edit (e.g. 'change the background to a beach').")
+
+        def _load():
+            from diffusers import FluxKontextPipeline
+            dtype = torch.bfloat16 if DEVICE == "cuda" else torch.float32
+            print(f"[Diffusion] Loading FLUX.1-Kontext-dev ...")
+            pipe = FluxKontextPipeline.from_pretrained(FLUX_KONTEXT_REPO, torch_dtype=dtype)
+            if DEVICE == "cuda":
+                total_gb = torch.cuda.get_device_properties(0).total_memory / 1024**3
+                pipe.to("cuda") if total_gb >= 38 else pipe.enable_model_cpu_offload()
+            return pipe
+
+        try:
+            pipe = load_model("img_kontext", _load)
+        except Exception as e:
+            raise RuntimeError(
+                "FLUX.1-Kontext-dev failed to load — it is gated. Set HF_TOKEN "
+                f"and accept its license at huggingface.co/{FLUX_KONTEXT_REPO}.\n{e}"
+            )
+
+        from diffusers.utils import load_image
+        generator = None
+        if seed is not None and int(seed) >= 0:
+            generator = torch.Generator(device=DEVICE).manual_seed(int(seed))
+
+        with torch.inference_mode():
+            image = pipe(
+                image=load_image(image_path),
+                prompt=prompt,
+                num_inference_steps=int(steps),
+                guidance_scale=float(guidance),
+                generator=generator,
+            ).images[0]
+
+        out_path = timestamp_file("kontext", "png")
+        image.save(out_path)
+        print(f"[Diffusion] Saved: {out_path}")
+        return out_path
 
     def run(self, prompt, variant="sdxl_real",
             width=1024, height=1024,

@@ -39,6 +39,8 @@ MUSETALK_UNET_CONFIG = os.path.join(MUSETALK_DIR, "models", "musetalkV15", "muse
 # Text → image
 FLUX_DEV_REPO     = "black-forest-labs/FLUX.1-dev"
 FLUX_SCHNELL_REPO = "black-forest-labs/FLUX.1-schnell"
+# Instruction-based image editing (gated, needs HF_TOKEN + license)
+FLUX_KONTEXT_REPO = "black-forest-labs/FLUX.1-Kontext-dev"
 
 # Face swap
 INSIGHTFACE_ROOT = os.path.join(MODEL_ROOT, "insightface")
