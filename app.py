@@ -655,7 +655,7 @@ with gr.Blocks(css=CSS, title="Image-Talk", analytics_enabled=False) as demo:
             with gr.Row(equal_height=False):
                 with gr.Column(scale=1):
                     gr.HTML("<div class='section-label'>Instruction editing "
-                            "(FLUX-Kontext · needs HF_TOKEN + license)</div>")
+                            "(FLUX-Kontext · needs HF_TOKEN + license + venv_ltx / cell 7b)</div>")
                     ie_img = gr.Image(label="Image to edit", type="filepath",
                                       elem_classes=["output-media"])
                     ie_prompt = gr.Textbox(label="Edit instruction", lines=3,

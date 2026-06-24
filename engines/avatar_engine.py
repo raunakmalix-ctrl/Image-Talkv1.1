@@ -23,12 +23,25 @@ from engines.diffusion_engine import SDXL_REAL_REPO, SDXL_NEGATIVE
 _app = None
 
 
+def _fix_antelopev2():
+    """The antelopev2 zip extracts into a nested antelopev2/antelopev2/ folder,
+    so InsightFace can't find the models ('detection' assert). Flatten it."""
+    import glob, shutil
+    base = os.path.join(INSIGHTFACE_ROOT, "models", "antelopev2")
+    nested = os.path.join(base, "antelopev2")
+    if os.path.isdir(nested) and not glob.glob(os.path.join(base, "*.onnx")):
+        for f in glob.glob(os.path.join(nested, "*")):
+            shutil.move(f, base)
+        print("[Avatar] flattened antelopev2 folder")
+
+
 def _load_app():
     """antelopev2 face analysis (InstantID's expected detector)."""
     global _app
     if _app is None:
         from insightface.app import FaceAnalysis
         print("[Avatar] Loading antelopev2 ...")
+        _fix_antelopev2()
         _app = FaceAnalysis(name="antelopev2", root=INSIGHTFACE_ROOT,
                             providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
         _app.prepare(ctx_id=0, det_size=(640, 640))

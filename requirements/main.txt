@@ -24,6 +24,7 @@ opencv-python-headless
 gfpgan
 basicsr
 facexlib
+lpips        # CodeFormer's basicsr imports this
 
 # Transcript (Feature 2, step 1) — faster-whisper gives word timestamps without
 # WhisperX's pyannote/torchaudio coupling (which breaks on Colab's torchaudio).
@@ -33,9 +34,9 @@ faster-whisper
 pydub
 soundfile
 imageio-ffmpeg
-# Media Studio: background removal (CPU onnx, downloads u2net on first use)
+# Media Studio: background removal (downloads u2net on first use). rembg pulls
+# onnxruntime (CPU); install_main.sh re-pins onnxruntime-gpu afterwards.
 rembg
-onnxruntime
 # Exact pin: has HfFolder (for gradio) and works with diffusers 0.31 / transformers 4.44.
 huggingface_hub==0.25.2
 

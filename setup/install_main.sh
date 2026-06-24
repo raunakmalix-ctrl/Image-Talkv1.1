@@ -53,4 +53,15 @@ PY
 # missing-face tolerance).
 bash "$ROOT/setup/patch_thirdparty.sh"
 
+# rembg pulls CPU onnxruntime, which shadows onnxruntime-gpu and forces
+# face swap / InsightFace onto CPU. Re-pin GPU as the only onnxruntime.
+echo "==> ensuring onnxruntime-gpu (GPU provider for face swap/InstantID)"
+pip uninstall -y -q onnxruntime onnxruntime-gpu >/dev/null 2>&1 || true
+pip install -q onnxruntime-gpu
+
+# rembg -> pymatting -> cupy; Colab's cupy 14 is built for numpy 2 and crashes
+# against our numpy<2. Pin a numpy-1.x-compatible cupy.
+echo "==> pinning numpy-compatible cupy (for Media Studio background removal)"
+pip install -q "cupy-cuda12x>=13,<14" || echo "  (cupy pin skipped)"
+
 echo "==> main env ready."

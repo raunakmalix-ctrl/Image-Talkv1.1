@@ -80,48 +80,32 @@ class DiffusionEngine(BaseEngine):
             unload_model(f"img_{variant}")
 
     # ── Instruction-based image editing (FLUX.1-Kontext-dev, gated) ──────────
+    # FluxKontextPipeline needs newer diffusers than the main env's pin, so it
+    # runs in venv_ltx (diffusers-from-git) via a worker subprocess.
     def edit(self, image_path, prompt, steps=28, guidance=2.5, seed=-1):
+        import os
+        from core.config import VENV_LTX_PY, PROJECT_ROOT
+        from core.subprocess_runner import run_worker
+
         if not image_path:
             raise ValueError("Upload an image to edit.")
         if not prompt or not prompt.strip():
             raise ValueError("Describe the edit (e.g. 'change the background to a beach').")
-
-        def _load():
-            from diffusers import FluxKontextPipeline
-            dtype = torch.bfloat16 if DEVICE == "cuda" else torch.float32
-            print(f"[Diffusion] Loading FLUX.1-Kontext-dev ...")
-            pipe = FluxKontextPipeline.from_pretrained(FLUX_KONTEXT_REPO, torch_dtype=dtype)
-            if DEVICE == "cuda":
-                total_gb = torch.cuda.get_device_properties(0).total_memory / 1024**3
-                pipe.to("cuda") if total_gb >= 38 else pipe.enable_model_cpu_offload()
-            return pipe
-
-        try:
-            pipe = load_model("img_kontext", _load)
-        except Exception as e:
+        if not os.path.exists(VENV_LTX_PY):
             raise RuntimeError(
-                "FLUX.1-Kontext-dev failed to load — it is gated. Set HF_TOKEN "
-                f"and accept its license at huggingface.co/{FLUX_KONTEXT_REPO}.\n{e}"
+                "Image Edit uses venv_ltx (newer diffusers) — run setup/make_ltx_venv.sh "
+                "(notebook cell 7b) first."
             )
 
-        from diffusers.utils import load_image
-        generator = None
-        if seed is not None and int(seed) >= 0:
-            generator = torch.Generator(device=DEVICE).manual_seed(int(seed))
-
-        with torch.inference_mode():
-            image = pipe(
-                image=load_image(image_path),
-                prompt=prompt,
-                num_inference_steps=int(steps),
-                guidance_scale=float(guidance),
-                generator=generator,
-            ).images[0]
-
         out_path = timestamp_file("kontext", "png")
-        image.save(out_path)
-        print(f"[Diffusion] Saved: {out_path}")
-        return out_path
+        worker = os.path.join(PROJECT_ROOT, "workers", "kontext_worker.py")
+        return run_worker(
+            VENV_LTX_PY, worker,
+            {"repo": FLUX_KONTEXT_REPO, "image": image_path, "prompt": prompt,
+             "steps": int(steps), "guidance": float(guidance), "seed": int(seed),
+             "out_path": out_path},
+            cwd=PROJECT_ROOT, timeout=1800,
+        )
 
     def run(self, prompt, variant="sdxl_real",
             width=1024, height=1024,

@@ -44,7 +44,8 @@ class MediaEngine(BaseEngine):
         cmd = [FFMPEG_PATH, "-y", "-ss", str(start), "-i", path]
         if end > start:
             cmd += ["-to", str(end - start)]
-        cmd += ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", out]
+        cmd += ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac",
+                "-movflags", "+faststart", out]
         return _run(cmd)
 
     def trim_audio(self, path, start, end, fmt="wav"):
@@ -85,12 +86,14 @@ class MediaEngine(BaseEngine):
         if target == "MP4 (H.264)":
             out = timestamp_file("conv", "mp4")
             return _run([FFMPEG_PATH, "-y", "-i", path, "-c:v", "libx264",
-                         "-pix_fmt", "yuv420p", "-c:a", "aac", out])
+                         "-pix_fmt", "yuv420p", "-c:a", "aac",
+                         "-movflags", "+faststart", out])
         if target == "Compress MP4":
             out = timestamp_file("compressed", "mp4")
             return _run([FFMPEG_PATH, "-y", "-i", path, "-c:v", "libx264",
                          "-crf", "28", "-preset", "veryfast",
-                         "-c:a", "aac", "-b:a", "96k", out])
+                         "-c:a", "aac", "-b:a", "96k",
+                         "-movflags", "+faststart", out])
         if target == "MP3":
             out = timestamp_file("conv", "mp3")
             return _run([FFMPEG_PATH, "-y", "-i", path, "-vn",
@@ -106,7 +109,9 @@ class MediaEngine(BaseEngine):
         w, h = int(width), int(height)
         out = timestamp_file("resized", "mp4")
         return _run([FFMPEG_PATH, "-y", "-i", path,
-                     "-vf", f"scale={w}:{h}", "-c:a", "copy", out])
+                     "-vf", f"scale={w}:{h}", "-c:v", "libx264",
+                     "-pix_fmt", "yuv420p", "-c:a", "aac",
+                     "-movflags", "+faststart", out])
 
     def to_gif(self, path, fps=12, width=480):
         if path is None:
