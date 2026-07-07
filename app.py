@@ -69,7 +69,7 @@ def free_inprocess():
 
 def vram_html():
     return (f"<div class='vram-footer'>"
-            f"<span class='vram-text'>⬡ IMAGE·TALK &nbsp;·&nbsp; v1.1</span>"
+            f"<span class='vram-text'>◆ VAJRA &nbsp;·&nbsp; Offline AI Suite</span>"
             f"<span class='vram-text vram-accent'>{vram_status()}</span></div>")
 
 
@@ -334,7 +334,7 @@ def zip_outputs():
 # ════════════════════════════════════════════════════════════════════════════
 from app_theme import CSS, THEME_JS, MASTHEAD   # noqa: E402
 
-with gr.Blocks(css=CSS, title="Image-Talk", analytics_enabled=False) as demo:
+with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
     gr.HTML(f"<script>{THEME_JS}</script>")
     gr.HTML(MASTHEAD)
 
