@@ -5,6 +5,10 @@
 # gradio 4.44.x is the last line that imports HfFolder (needs huggingface_hub<1.0).
 gradio==4.44.1
 gradio-client==1.3.0
+# gradio 4.44 breaks on newer starlette (TemplateResponse -> "unhashable type:
+# 'dict'"); pin the fastapi/starlette pair it was built against.
+fastapi==0.112.2
+starlette<0.39
 
 # FLUX.1 (text -> image). Pinned as ONE mutually consistent set with
 # huggingface_hub 0.25.2 below — Colab's newer transformers/diffusers expect

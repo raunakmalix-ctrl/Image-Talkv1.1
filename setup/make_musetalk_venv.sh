@@ -23,6 +23,14 @@ echo "==> torch 2.0.1 (cu118)"
 "$V/bin/pip" install -q \
   torch==2.0.1 torchvision==0.15.2 torchaudio==2.0.2 --index-url "$CU"
 
+# mmpose (below) transitively depends on chumpy, an unmaintained package with
+# no pyproject.toml. Under pip's build isolation its legacy setup.py can't see
+# numpy at metadata time and fails ("Failed to build chumpy"). Pre-install
+# numpy, then build chumpy with build isolation off so it sees the venv's numpy.
+echo "==> pre-installing chumpy (mmpose dependency; needs --no-build-isolation)"
+"$V/bin/pip" install -q "numpy<2"
+"$V/bin/pip" install -q --no-build-isolation chumpy==0.70
+
 echo "==> MuseTalk requirements + extras"
 [ -f "$TP/MuseTalk/requirements.txt" ] && \
   "$V/bin/pip" install -q -r "$TP/MuseTalk/requirements.txt" || true
