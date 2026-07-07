@@ -73,6 +73,28 @@ def vram_html():
             f"<span class='vram-text vram-accent'>{vram_status()}</span></div>")
 
 
+def ribbon_html():
+    import torch
+    dev = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU (no GPU)"
+    return (
+        "<div class='status-ribbon'>"
+        "<span class='sr-item'><span class='sr-dot'></span><b class='sr-live'>ONLINE</b></span>"
+        "<span class='sr-item'><i class='ti ti-shield-lock'></i>100% OFFLINE / LOCAL</span>"
+        f"<span class='sr-item'><i class='ti ti-cpu'></i>Compute&nbsp;<b>{dev}</b></span>"
+        "<span class='sr-item'><i class='ti ti-stack-2'></i><b>8</b>&nbsp;Modules</span>"
+        "</div>"
+    )
+
+
+def hero(icon, title, sub):
+    return (f"<div class='tab-hero'><div class='th-ico'><i class='ti {icon}'></i></div>"
+            f"<div class='th-txt'><span class='th-title'>{title}</span>"
+            f"<span class='th-sub'>{sub}</span></div></div>")
+
+
+AWAIT = "<span class='empty-hint'><i class='ti ti-player-play'></i>Awaiting input…</span>"
+
+
 def ok(msg):  return f"<span class='status-ok'>✔ {msg}</span>"
 
 def err(msg):
@@ -337,11 +359,14 @@ from app_theme import CSS, THEME_JS, MASTHEAD   # noqa: E402
 with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
     gr.HTML(f"<script>{THEME_JS}</script>")
     gr.HTML(MASTHEAD)
+    gr.HTML(ribbon_html())
 
     with gr.Tabs() as tabs:
 
         # ── 01 Talking Video ────────────────────────────────────────────────
         with gr.Tab("01 · Talking Video", id=0):
+            gr.HTML(hero("ti-user-video", "Talking Video",
+                "Turn a portrait + a voice sample + text into a talking video."))
             with gr.Row(equal_height=False):
                 with gr.Column(scale=1):
                     gr.HTML("<div class='section-label'>Portrait &amp; Voice</div>")
@@ -369,7 +394,7 @@ with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
                 with gr.Column(scale=1):
                     gr.HTML("<div class='section-label'>Output</div>")
                     tv_out = gr.Video(label="", elem_classes=["output-media"])
-                    tv_status = gr.HTML(ok("Ready"))
+                    tv_status = gr.HTML(AWAIT)
             tv_audio.change(audio_info, [tv_audio], [tv_ainfo])
             tv_btn.click(run_talking_video,
                          [tv_img, tv_audio, tv_text, tv_lang, tv_engine, tv_size,
@@ -379,6 +404,8 @@ with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
         # ── 02 Edit & Relip ─────────────────────────────────────────────────
         with gr.Tab("02 · Edit & Relip", id=1):
             ed_state = gr.State(None)
+            gr.HTML(hero("ti-pencil", "Edit & Relip",
+                "Pull a video's transcript, change words, re-sync the lips."))
             with gr.Row(equal_height=False):
                 with gr.Column(scale=1):
                     gr.HTML("<div class='section-label'>Source Video</div>")
@@ -401,7 +428,7 @@ with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
                 with gr.Column(scale=1):
                     gr.HTML("<div class='section-label'>Output</div>")
                     ed_out = gr.Video(label="", elem_classes=["output-media"])
-                    ed_status = gr.HTML(ok("Ready"))
+                    ed_status = gr.HTML(AWAIT)
             ed_extract.click(do_extract, [ed_video], [ed_text, ed_state, ed_status])
             ed_relip.click(do_relip,
                            [ed_state, ed_text, ed_method, ed_steps, ed_guid],
@@ -409,6 +436,8 @@ with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
 
         # ── 03 Text → Image ─────────────────────────────────────────────────
         with gr.Tab("03 · Text → Image", id=2):
+            gr.HTML(hero("ti-photo", "Text → Image",
+                "Generate photoreal images from a prompt (SDXL / FLUX)."))
             with gr.Row(equal_height=False):
                 with gr.Column(scale=1):
                     gr.HTML("<div class='section-label'>Prompt</div>")
@@ -432,7 +461,7 @@ with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
                 with gr.Column(scale=1):
                     gr.HTML("<div class='section-label'>Output</div>")
                     ti_out = gr.Image(label="", elem_classes=["output-media"])
-                    ti_status = gr.HTML(ok("Ready"))
+                    ti_status = gr.HTML(AWAIT)
             ti_btn.click(run_txt2img,
                          [ti_prompt, ti_variant, ti_neg, ti_w, ti_h,
                           ti_steps, ti_guid, ti_seed],
@@ -440,6 +469,8 @@ with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
 
         # ── 04 Face Swap ────────────────────────────────────────────────────
         with gr.Tab("04 · Face Swap", id=3):
+            gr.HTML(hero("ti-mask", "Face Swap",
+                "Swap a source face onto a target image or every video frame."))
             with gr.Row(equal_height=False):
                 with gr.Column(scale=1):
                     gr.HTML("<div class='section-label'>Source &amp; Target</div>")
@@ -462,7 +493,7 @@ with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
                     gr.HTML("<div class='section-label'>Output</div>")
                     fs_oimg = gr.Image(label="", visible=True, elem_classes=["output-media"])
                     fs_ovid = gr.Video(label="", visible=False, elem_classes=["output-media"])
-                    fs_status = gr.HTML(ok("Ready"))
+                    fs_status = gr.HTML(AWAIT)
             fs_mode.change(toggle_swap_mode, [fs_mode],
                            [fs_timg, fs_tvid, fs_oimg, fs_ovid])
             fs_btn.click(run_faceswap,
@@ -471,6 +502,8 @@ with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
 
         # ── 05 Text → Video (LTX-0.9.7-distilled) ────────────────────────────
         with gr.Tab("05 · Text → Video", id=4):
+            gr.HTML(hero("ti-movie", "Text → Video",
+                "Generate short video clips from a prompt (LTX-Video)."))
             with gr.Row(equal_height=False):
                 with gr.Column(scale=1):
                     gr.HTML("<div class='section-label'>LTX-Video 0.9.7-distilled "
@@ -491,7 +524,7 @@ with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
                 with gr.Column(scale=1):
                     gr.HTML("<div class='section-label'>Output</div>")
                     lx_out = gr.Video(label="", elem_classes=["output-media"])
-                    lx_status = gr.HTML(ok("Ready"))
+                    lx_status = gr.HTML(AWAIT)
             lx_btn.click(run_ltx,
                          [lx_prompt, lx_neg, lx_w, lx_h,
                           lx_frames, lx_steps, lx_guid],
@@ -499,6 +532,8 @@ with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
 
         # ── 06 Media Studio (ffmpeg/CPU — no GPU cost) ───────────────────────
         with gr.Tab("06 · Media Studio", id=5):
+            gr.HTML(hero("ti-adjustments", "Media Studio",
+                "Trim, grab frames, clean audio, convert, merge — all CPU, no GPU."))
             gr.HTML("<div class='section-label'>Prep your media — free (no A100). "
                     "Use the “→ Send to” buttons to push results into the AI tabs.</div>")
 
@@ -652,6 +687,8 @@ with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
 
         # ── 07 Image Edit (FLUX.1-Kontext-dev) ───────────────────────────────
         with gr.Tab("07 · Image Edit", id=6):
+            gr.HTML(hero("ti-wand", "Image Edit",
+                "Edit an image by instruction — change background, style, add objects."))
             with gr.Row(equal_height=False):
                 with gr.Column(scale=1):
                     gr.HTML("<div class='section-label'>Instruction editing "
@@ -669,12 +706,14 @@ with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
                 with gr.Column(scale=1):
                     gr.HTML("<div class='section-label'>Output</div>")
                     ie_out = gr.Image(label="", elem_classes=["output-media"])
-                    ie_status = gr.HTML(ok("Ready"))
+                    ie_status = gr.HTML(AWAIT)
             ie_btn.click(run_edit, [ie_img, ie_prompt, ie_steps, ie_guid, ie_seed],
                          [ie_out, ie_status])
 
         # ── 08 Avatar Studio (photos → talking video) ────────────────────────
         with gr.Tab("08 · Avatar Studio", id=7):
+            gr.HTML(hero("ti-user-star", "Avatar Studio",
+                "A few photos of a person → a talking video of them saying your script."))
             with gr.Row(equal_height=False):
                 with gr.Column(scale=1):
                     gr.HTML("<div class='section-label'>1 · Identity "
@@ -712,7 +751,7 @@ with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
                     av_portrait = gr.Image(label="", elem_classes=["output-media"])
                     gr.HTML("<div class='section-label'>Talking video</div>")
                     av_out = gr.Video(label="", elem_classes=["output-media"])
-                    av_status = gr.HTML(ok("Ready"))
+                    av_status = gr.HTML(AWAIT)
 
             def _toggle_voice(mode):
                 preset = mode.startswith("Preset")
@@ -732,10 +771,12 @@ with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
 
 if __name__ == "__main__":
     share = os.environ.get("IMAGE_TALK_SHARE", "1") == "1"
+    _fav = os.path.join(PROJECT_ROOT, "assets", "favicon.svg")
     demo.queue(max_size=4)
     demo.launch(
         server_name="0.0.0.0",
         server_port=int(os.environ.get("IMAGE_TALK_PORT", "7860")),
         share=share,
         show_error=True,
+        favicon_path=_fav if os.path.exists(_fav) else None,
     )

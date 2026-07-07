@@ -6,6 +6,7 @@ Palette: white canvas · navy command panels · amber accent (military / HUD).
 
 CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&family=Crimson+Pro:ital,wght@1,400;1,500&display=swap');
+@import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css');
 
 :root{
   --bg:#eef1f6; --bg-soft:#e6ebf2; --card:#ffffff;
@@ -174,6 +175,48 @@ button.secondary:hover{background:var(--navy)!important; color:#fff!important;}
 
 @keyframes fadeSlideUp{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);}}
 .gradio-container>*{animation:fadeSlideUp .35s cubic-bezier(.4,0,.2,1) both;}
+
+/* ── Masthead logo mark ───────────────────────────────────────────────── */
+.vj-brandrow{display:flex; align-items:center; gap:18px;}
+.vj-logo{width:64px; height:64px; flex:0 0 auto;
+  filter:drop-shadow(0 4px 10px rgba(14,37,64,.25));}
+
+/* ── Tab icons (injected by JS) ───────────────────────────────────────── */
+.tab-nav button i.ti{font-size:1rem; margin-right:8px; vertical-align:-2px;}
+
+/* ── Status ribbon (under the tab bar) ────────────────────────────────── */
+.status-ribbon{display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+  background:var(--card); border:1px solid var(--border);
+  border-left:4px solid var(--amber); border-radius:var(--radius);
+  padding:8px 16px; margin:12px 4px 0;}
+.status-ribbon .sr-item{font-family:'Rajdhani',sans-serif; font-weight:600;
+  font-size:.72rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--muted); display:flex; align-items:center; gap:7px;}
+.status-ribbon .sr-item i{font-size:.95rem; color:var(--amber);}
+.status-ribbon .sr-item b{color:var(--navy); font-weight:700;}
+:root[data-theme="dark"] .status-ribbon .sr-item b{color:var(--ink);}
+.sr-dot{width:8px; height:8px; border-radius:50%; background:var(--ok);
+  box-shadow:0 0 0 3px rgba(31,157,85,.18);}
+.sr-live{color:var(--ok)!important;}
+
+/* ── Per-tab hero header ──────────────────────────────────────────────── */
+.tab-hero{display:flex; align-items:center; gap:14px; padding:6px 2px 16px;
+  border-bottom:1px solid var(--border); margin-bottom:18px;}
+.tab-hero .th-ico{width:42px; height:42px; flex:0 0 auto; border-radius:9px;
+  background:var(--navy); color:var(--amber); display:flex; align-items:center;
+  justify-content:center; font-size:1.35rem; box-shadow:var(--shadow-sm);}
+.tab-hero .th-txt{display:flex; flex-direction:column; gap:1px;}
+.tab-hero .th-title{font-family:'Oswald',sans-serif; font-weight:600;
+  font-size:1.12rem; letter-spacing:.04em; color:var(--navy); text-transform:uppercase;}
+:root[data-theme="dark"] .tab-hero .th-title{color:var(--ink);}
+.tab-hero .th-sub{font-family:'Inter',sans-serif; font-size:.86rem; color:var(--muted);}
+
+/* ── Empty-state for output media ─────────────────────────────────────── */
+.output-media .empty,.output-media .wrap{min-height:210px!important;}
+.empty-hint{font-family:'Rajdhani',sans-serif; font-weight:600; font-size:.82rem;
+  letter-spacing:.09em; text-transform:uppercase; color:var(--muted);
+  display:flex; align-items:center; gap:8px;}
+.empty-hint i{font-size:1rem; color:var(--amber);}
 """
 
 THEME_JS = """
@@ -186,6 +229,20 @@ function vajraToggle(){
     root.setAttribute('data-theme','dark'); if(btn) btn.textContent='☀ Light Mode';
   }
 }
+// Inject Tabler icons into the tab buttons (Gradio renders tab labels as text).
+const VAJRA_TAB_ICONS=['ti-user-video','ti-pencil','ti-photo','ti-mask',
+  'ti-movie','ti-adjustments','ti-wand','ti-user-star'];
+function vajraTabIcons(){
+  const btns=document.querySelectorAll('.tab-nav button');
+  btns.forEach((b,i)=>{
+    if(b.querySelector('i.ti')||!VAJRA_TAB_ICONS[i]) return;
+    const ic=document.createElement('i');
+    ic.className='ti '+VAJRA_TAB_ICONS[i];
+    b.insertBefore(ic,b.firstChild);
+  });
+}
+new MutationObserver(vajraTabIcons).observe(document.documentElement,{childList:true,subtree:true});
+setTimeout(vajraTabIcons,600); setTimeout(vajraTabIcons,1800);
 """
 
 MASTHEAD = """
@@ -193,7 +250,13 @@ MASTHEAD = """
   <div class="vj-rail"></div>
   <div class="vj-inner">
     <div class="vj-brand">
-      <span class="vj-wordmark">VAJRA</span>
+      <div class="vj-brandrow">
+        <svg class="vj-logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <rect width="64" height="64" rx="13" fill="#0f2740"/>
+          <path d="M37 7 L17 35 H29 L25 57 L47 25 H34 Z" fill="#f5a623"/>
+        </svg>
+        <span class="vj-wordmark">VAJRA</span>
+      </div>
       <span class="vj-tagline">Digital Lies. Kinetic Chaos.</span>
       <span class="vj-subtitle">Unified, Offline, Multi-Modal Deep Learning Platform
         for Image, Voice &amp; Video Synthesis</span>
