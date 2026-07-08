@@ -6,6 +6,7 @@ transformers
 accelerate
 safetensors
 sentencepiece
+tiktoken   # LTX/Kontext tokenizer configs are tiktoken-format
 imageio
 imageio-ffmpeg
 av

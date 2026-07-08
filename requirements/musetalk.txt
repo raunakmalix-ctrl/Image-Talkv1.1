@@ -2,7 +2,10 @@
 # the rest; the mmlab stack (mmcv/mmdet/mmpose) is installed via mim in
 # setup/make_musetalk_venv.sh. torch is installed there too.
 setuptools<81
-huggingface_hub
+# MuseTalk's own requirements.txt installs a transformers that needs
+# huggingface_hub<1.0; an unpinned install here pulled 1.x and broke it
+# ("huggingface-hub>=0.19.3,<1.0 is required ... but found 1.22.0").
+huggingface_hub==0.25.2
 gdown
 requests
 omegaconf

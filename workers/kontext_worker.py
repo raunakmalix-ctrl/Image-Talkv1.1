@@ -7,6 +7,11 @@ import os
 import sys
 
 os.environ["MPLBACKEND"] = "Agg"
+# HF's Xet transfer backend has a background-writer bug on Colab ("Internal
+# Writer Error: Background writer channel closed"); force the classic HTTP
+# downloader instead. Must be set before huggingface_hub/diffusers import.
+os.environ["HF_HUB_DISABLE_XET"] = "1"
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.subprocess_runner import read_args, emit_result   # noqa: E402
 
