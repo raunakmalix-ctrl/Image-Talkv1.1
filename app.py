@@ -1,5 +1,5 @@
 """
-Image-Talk v1.1 — AI Media Studio (Colab / Gradio)
+VAJRA v1.1 — AI Media Studio (Colab / Gradio)
 
 Run:  python app.py        (set IMAGE_TALK_SHARE=1 for a public link)
 """

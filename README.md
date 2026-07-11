@@ -1,4 +1,4 @@
-# Image-Talk v1.1 — AI Media Studio
+# VAJRA v1.1 — AI Media Studio
 
 A single Gradio app (built for Google Colab Pro) bundling four AI media tools:
 
@@ -22,7 +22,7 @@ A single Gradio app (built for Google Colab Pro) bundling four AI media tools:
 
 ## Run in Colab
 
-Open **`Image_Talk_Colab.ipynb`**, set the runtime to a GPU (A100 recommended),
+Open **`VAJRA_v1.1_Colab.ipynb`**, set the runtime to a GPU (A100 recommended),
 and run the cells top to bottom. The last cell prints a public `*.gradio.live`
 link to the studio.
 

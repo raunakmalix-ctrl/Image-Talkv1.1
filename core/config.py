@@ -1,8 +1,8 @@
 """
-Central path configuration for Image-Talk v1.1 (Colab).
+Central path configuration for VAJRA v1.1 (Colab).
 
 Everything derives from PROJECT_ROOT. In Colab the repo is cloned to
-/content/Image-Talkv1.1 and this resolves automatically. Override with the
+/content/VAJRA-v1.1 and this resolves automatically. Override with the
 IMAGE_TALK_ROOT env var if you clone elsewhere.
 
 Model weights live under MODEL_ROOT. To persist them across Colab sessions,
