@@ -79,6 +79,7 @@ def free_inprocess():
 def vram_html():
     return (f"<div class='vram-footer'>"
             f"<span class='vram-text'>◆ VAJRA &nbsp;·&nbsp; Offline AI Suite</span>"
+            f"<span class='vram-text vj-clock' id='vajra-clock'>SYS TIME --:--:--Z</span>"
             f"<span class='vram-text vram-accent'>{vram_status()}</span></div>")
 
 

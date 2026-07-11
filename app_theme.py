@@ -3,9 +3,24 @@
 Cosmetic only — no component IDs or structure depend on this file.
 Palette: white canvas · navy command panels · amber accent (military / HUD).
 """
+import base64
+import os
+
+_ASSETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+
+
+def _data_uri(name):
+    """Base64-embed a small local asset so it renders with no extra Gradio
+    static-file route (works identically in Colab and locally)."""
+    with open(os.path.join(_ASSETS, name), "rb") as f:
+        return "data:image/png;base64," + base64.b64encode(f.read()).decode()
+
+
+_IITI_LOGO = _data_uri("iiti_logo.png")
+_MCTE_LOGO = _data_uri("mcte_flash_logo.png")
 
 CSS = """
-@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&family=Crimson+Pro:ital,wght@1,400;1,500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&family=Crimson+Pro:ital,wght@1,400;1,500&family=Share+Tech+Mono&display=swap');
 @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css');
 
 :root{
@@ -19,6 +34,8 @@ CSS = """
   --shadow:0 8px 24px rgba(14,37,64,.10);
   --shadow-sm:0 2px 8px rgba(14,37,64,.08);
   --transition:all .18s cubic-bezier(.4,0,.2,1);
+  --mono:'Share Tech Mono',ui-monospace,monospace;
+  --grid-line:rgba(19,61,102,.05);
 }
 :root[data-theme="dark"]{
   --bg:#0a1420; --bg-soft:#0c1a29; --card:#102135;
@@ -26,14 +43,25 @@ CSS = """
   --ink:#e9eff6; --muted:#93a1b3; --tagline:#7f8ba0;
   --border:#1f3550; --border-strong:#2c445f;
   --shadow:0 10px 30px rgba(0,0,0,.55); --shadow-sm:0 2px 10px rgba(0,0,0,.4);
+  --grid-line:rgba(245,166,35,.06);
 }
 
 *,*::before,*::after{box-sizing:border-box;}
 body,.gradio-container{
-  background:var(--bg)!important; color:var(--ink)!important;
+  background-color:var(--bg)!important; color:var(--ink)!important;
   font-family:'Inter',system-ui,sans-serif!important; transition:var(--transition);
 }
-.gradio-container{max-width:100%!important;}
+/* faint site-wide tactical lattice (three sets of parallel lines = hex grid).
+   Scoped to a single element with default (scroll) attachment -- `fixed`
+   attachment plus layered repeating-gradients on two nested elements was
+   expensive enough to stall rendering. */
+.gradio-container{
+  max-width:100%!important;
+  background-image:
+    repeating-linear-gradient(0deg, var(--grid-line) 0 1px, transparent 1px 42px),
+    repeating-linear-gradient(60deg, var(--grid-line) 0 1px, transparent 1px 42px),
+    repeating-linear-gradient(120deg, var(--grid-line) 0 1px, transparent 1px 42px);
+}
 
 /* ── Masthead ─────────────────────────────────────────────────────────── */
 .vajra-masthead{
@@ -47,8 +75,45 @@ body,.gradio-container{
     linear-gradient(90deg,var(--border) 1px,transparent 1px);
   background-size:44px 44px; mask-image:linear-gradient(90deg,transparent,#000 40%,transparent);
 }
+.vajra-masthead::after{  /* scanline sweep -- transform-only so it's compositor-driven
+  and never forces layout, unlike animating `top` */
+  content:''; position:absolute; left:0; right:0; height:2px; top:0;
+  background:linear-gradient(90deg,transparent,rgba(245,166,35,.6),transparent);
+  animation:vjScan 6s linear infinite; pointer-events:none; z-index:4;
+  will-change:transform;
+}
+@keyframes vjScan{
+  0%{transform:translateY(0); opacity:0;}
+  6%{opacity:1;} 94%{opacity:1;}
+  100%{transform:translateY(420px); opacity:0;}
+}
 .vj-rail{position:absolute; left:0; top:0; bottom:0; width:10px;
   background:linear-gradient(180deg,var(--amber),var(--amber-deep)); z-index:2;}
+
+/* ── Institutional letterhead strip ───────────────────────────────────── */
+.vj-letterhead{position:relative; z-index:3; display:flex; align-items:center;
+  justify-content:space-between; gap:16px; padding:9px 40px 9px 56px;
+  background:var(--navy-deep); border-bottom:1px solid rgba(245,166,35,.25);}
+.vj-inst{display:flex; align-items:center; gap:10px; min-width:0;}
+.vj-inst-right{flex-direction:row-reverse; text-align:right;}
+.vj-inst-plate{flex:0 0 auto; width:34px; height:34px; border-radius:5px;
+  background:#fff; display:flex; align-items:center; justify-content:center;
+  box-shadow:0 1px 4px rgba(0,0,0,.35); overflow:hidden;}
+.vj-inst-plate img{width:100%; height:100%; object-fit:contain; padding:2px;}
+.vj-inst-text{font-family:'Rajdhani',sans-serif; font-weight:600; font-size:.62rem;
+  letter-spacing:.07em; text-transform:uppercase; color:#9db4d0; line-height:1.32;}
+:root[data-theme="dark"] .vj-inst-text{color:#7f93ab;}
+.vj-letterhead-mid{font-family:var(--mono); font-size:.68rem; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--amber); display:flex; align-items:center;
+  gap:8px; flex:0 0 auto;}
+.vj-blip{width:6px; height:6px; border-radius:50%; background:var(--amber);
+  box-shadow:0 0 0 3px rgba(245,166,35,.2); animation:vjPulseAmber 1.8s ease-out infinite;}
+@keyframes vjPulseAmber{
+  0%{box-shadow:0 0 0 0 rgba(245,166,35,.5);}
+  70%{box-shadow:0 0 0 6px rgba(245,166,35,0);}
+  100%{box-shadow:0 0 0 0 rgba(245,166,35,0);}
+}
+
 .vj-inner{position:relative; z-index:3; display:flex; align-items:center;
   justify-content:space-between; gap:28px; padding:26px 40px 24px 56px; flex-wrap:wrap;}
 .vj-brand{position:relative;}
@@ -56,6 +121,14 @@ body,.gradio-container{
   font-family:'Oswald',sans-serif; font-weight:700;
   font-size:clamp(3rem,7vw,5.4rem); line-height:.9; letter-spacing:.16em;
   color:var(--amber); text-shadow:2px 3px 0 rgba(15,39,64,.16); display:block;
+  cursor:default;
+}
+.vj-wordmark:hover{animation:vjGlitch .4s steps(2,end) 2;}
+@keyframes vjGlitch{
+  0%,100%{text-shadow:2px 3px 0 rgba(15,39,64,.16); transform:translate(0,0);}
+  20%{text-shadow:-2px 0 #e0453f,2px 0 #2ad1ff,2px 3px 0 rgba(15,39,64,.16); transform:translate(-1px,0);}
+  40%{text-shadow:2px 0 #e0453f,-2px 0 #2ad1ff,2px 3px 0 rgba(15,39,64,.16); transform:translate(1px,0);}
+  60%{text-shadow:-1px 0 #e0453f,1px 0 #2ad1ff,2px 3px 0 rgba(15,39,64,.16); transform:translate(-1px,0);}
 }
 .vj-brand::after{content:''; display:block; width:118px; height:4px; margin-top:10px;
   background:linear-gradient(90deg,var(--amber),transparent);}
@@ -97,8 +170,23 @@ body,.gradio-container{
 .gr-panel,.gr-group,.gr-box,.block,.form,.gr-accordion{
   background:var(--card)!important; border:1px solid var(--border)!important;
   border-radius:var(--radius-lg)!important; box-shadow:var(--shadow-sm)!important;
-  transition:var(--transition)!important;}
+  transition:var(--transition)!important; position:relative!important;}
 .gr-group:hover,.gr-panel:hover{border-color:var(--border-strong)!important;}
+
+/* targeting-reticle corner brackets, revealed on hover (decorative only —
+   pseudo-elements, so they never touch any component's actual content/color) */
+.gr-panel::before,.gr-panel::after,.gr-group::before,.gr-group::after,
+.gr-box::before,.gr-box::after,.block::before,.block::after,
+.gr-accordion::before,.gr-accordion::after{
+  content:''; position:absolute; width:10px; height:10px; border:2px solid var(--amber);
+  opacity:0; transition:opacity .2s ease; pointer-events:none; z-index:5;}
+.gr-panel::before,.gr-group::before,.gr-box::before,.block::before,.gr-accordion::before{
+  top:-1px; left:-1px; border-right:none; border-bottom:none;}
+.gr-panel::after,.gr-group::after,.gr-box::after,.block::after,.gr-accordion::after{
+  bottom:-1px; right:-1px; border-left:none; border-top:none;}
+.gr-panel:hover::before,.gr-panel:hover::after,.gr-group:hover::before,.gr-group:hover::after,
+.gr-box:hover::before,.gr-box:hover::after,.block:hover::before,.block:hover::after,
+.gr-accordion:hover::before,.gr-accordion:hover::after{opacity:1;}
 
 /* Accordion headers (Media Studio) */
 .gr-accordion .label-wrap,.gr-accordion span.label-wrap{
@@ -135,13 +223,21 @@ input[type=checkbox],input[type=radio]{accent-color:var(--amber)!important; widt
 /* ── Buttons ──────────────────────────────────────────────────────────── */
 .gr-button{font-family:'Rajdhani',sans-serif!important; font-weight:700!important;
   font-size:.78rem!important; letter-spacing:.11em!important; text-transform:uppercase!important;
-  border-radius:var(--radius)!important; transition:var(--transition)!important;}
+  border-radius:var(--radius)!important; transition:var(--transition)!important;
+  position:relative!important;}
 button.primary,.gr-button.primary{
   background:var(--amber)!important; color:var(--navy-deep)!important; border:none!important;
   padding:12px 26px!important; box-shadow:0 4px 14px rgba(245,166,35,.35)!important;}
 button.primary:hover{filter:brightness(1.06)!important; transform:translateY(-1px)!important;
   box-shadow:0 7px 20px rgba(245,166,35,.45)!important;}
 button.primary:active{transform:translateY(0)!important;}
+/* targeting-lock flash on hover — pure decoration, no layout impact */
+button.primary::before,button.primary::after{
+  content:''; position:absolute; width:9px; height:9px; border:2px solid var(--amber);
+  opacity:0; transition:opacity .15s ease,transform .15s ease; pointer-events:none;}
+button.primary::before{top:-6px; left:-6px; border-right:none; border-bottom:none; transform:translate(4px,4px);}
+button.primary::after{bottom:-6px; right:-6px; border-left:none; border-top:none; transform:translate(-4px,-4px);}
+button.primary:hover::before,button.primary:hover::after{opacity:1; transform:translate(0,0);}
 button.secondary,.gr-button.secondary{
   background:transparent!important; color:var(--navy)!important;
   border:1.5px solid var(--navy)!important;}
@@ -163,10 +259,12 @@ button.secondary:hover{background:var(--navy)!important; color:#fff!important;}
 
 /* ── Footer ───────────────────────────────────────────────────────────── */
 .vram-footer{background:var(--navy-deep); border-top:2px solid var(--amber);
-  padding:10px 26px; display:flex; align-items:center; justify-content:space-between;}
+  padding:10px 26px; display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:10px;}
 .vram-text{font-family:'Rajdhani',sans-serif; font-weight:600; font-size:.66rem;
   letter-spacing:.13em; text-transform:uppercase; color:#9db4d0;}
-.vram-accent{color:var(--amber);}
+.vram-accent{color:var(--amber); font-family:var(--mono);}
+.vj-clock{font-family:var(--mono)!important; color:#9db4d0;}
 
 ::-webkit-scrollbar{width:9px; height:9px;}
 ::-webkit-scrollbar-track{background:var(--bg-soft);}
@@ -196,8 +294,13 @@ button.secondary:hover{background:var(--navy)!important; color:#fff!important;}
 .status-ribbon .sr-item b{color:var(--navy); font-weight:700;}
 :root[data-theme="dark"] .status-ribbon .sr-item b{color:var(--ink);}
 .sr-dot{width:8px; height:8px; border-radius:50%; background:var(--ok);
-  box-shadow:0 0 0 3px rgba(31,157,85,.18);}
+  box-shadow:0 0 0 3px rgba(31,157,85,.18); animation:vjPulse 1.8s ease-out infinite;}
 .sr-live{color:var(--ok)!important;}
+@keyframes vjPulse{
+  0%{box-shadow:0 0 0 0 rgba(31,157,85,.5);}
+  70%{box-shadow:0 0 0 7px rgba(31,157,85,0);}
+  100%{box-shadow:0 0 0 0 rgba(31,157,85,0);}
+}
 
 /* ── Per-tab hero header ──────────────────────────────────────────────── */
 .tab-hero{display:flex; align-items:center; gap:14px; padding:6px 2px 16px;
@@ -255,11 +358,32 @@ function vajraTabIcons(){
 }
 new MutationObserver(vajraTabIcons).observe(document.documentElement,{childList:true,subtree:true});
 setTimeout(vajraTabIcons,600); setTimeout(vajraTabIcons,1800);
+
+// Live UTC clock in the footer ("SYS TIME" readout).
+function vajraClock(){
+  const el=document.getElementById('vajra-clock');
+  if(!el) return;
+  const d=new Date();
+  const p=n=>String(n).padStart(2,'0');
+  el.textContent='SYS TIME '+p(d.getUTCHours())+':'+p(d.getUTCMinutes())+':'+p(d.getUTCSeconds())+'Z';
+}
+setInterval(vajraClock,1000); vajraClock();
 """
 
 MASTHEAD = """
 <div class="vajra-masthead">
   <div class="vj-rail"></div>
+  <div class="vj-letterhead">
+    <div class="vj-inst">
+      <span class="vj-inst-plate"><img src="__IITI_LOGO__" alt="IIT Indore"/></span>
+      <span class="vj-inst-text">Indian Institute of<br/>Technology Indore</span>
+    </div>
+    <div class="vj-letterhead-mid"><span class="vj-blip"></span>Secure Local Compute Node</div>
+    <div class="vj-inst vj-inst-right">
+      <span class="vj-inst-text">Military College of<br/>Telecommunication Engineering</span>
+      <span class="vj-inst-plate"><img src="__MCTE_LOGO__" alt="MCTE"/></span>
+    </div>
+  </div>
   <div class="vj-inner">
     <div class="vj-brand">
       <div class="vj-brandrow">
@@ -287,3 +411,4 @@ MASTHEAD = """
   </div>
 </div>
 """
+MASTHEAD = MASTHEAD.replace("__IITI_LOGO__", _IITI_LOGO).replace("__MCTE_LOGO__", _MCTE_LOGO)
