@@ -44,6 +44,7 @@ diffusion   = ENGINES["diffusion"]
 faceswap    = ENGINES["faceswap"]
 transcript  = ENGINES["transcript"]
 ltx         = ENGINES["ltx"]
+ltx2        = ENGINES["ltx2"]
 media       = ENGINES["media"]
 motion      = ENGINES["motion"]
 
@@ -219,19 +220,26 @@ def run_faceswap(source, mode, target_img, target_vid, enhancer,
         GPU_LOCK.release()
 
 
-# ── Feature: Text → Video (LTX text-only, or Wan2.2-I2V with a reference photo)
-def run_ltx(image, prompt, negative, width, height, num_frames, steps, guidance):
+# ── Feature: Text → Video (LTX text-only, or a motion-video engine w/ a photo)
+def run_ltx(image, prompt, negative, width, height, num_frames, steps, guidance,
+            motion_engine):
     if not prompt or not prompt.strip():
         return None, warn("Prompt required")
     GPU_LOCK.acquire()
     try:
         free_inprocess()
         if image:
-            out = motion.run(image_path=image, prompt=prompt,
-                             negative_prompt=negative,
-                             width=int(width), height=int(height),
-                             num_frames=int(num_frames),
-                             guidance=float(guidance))
+            if motion_engine.startswith("LTX 2.3"):
+                out = ltx2.run(image_path=image, prompt=prompt,
+                               negative_prompt=negative,
+                               width=int(width), height=int(height),
+                               num_frames=int(num_frames))
+            else:
+                out = motion.run(image_path=image, prompt=prompt,
+                                 negative_prompt=negative,
+                                 width=int(width), height=int(height),
+                                 num_frames=int(num_frames),
+                                 guidance=float(guidance))
         else:
             out = ltx.run(prompt=prompt, negative_prompt=negative,
                           width=int(width), height=int(height),
@@ -423,21 +431,27 @@ with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
                          [fs_src, fs_mode, fs_timg, fs_tvid, fs_enh],
                          [fs_oimg, fs_ovid, fs_status])
 
-        # ── 04 Text → Video (LTX-0.9.7-distilled · Wan2.2-I2V w/ a photo) ────
+        # ── 04 Text → Video (LTX-0.9.7-distilled · Wan2.2-I2V/LTX-2.3 w/ a photo)
         with gr.Tab("04 · Text → Video", id=3):
             gr.HTML(hero("ti-movie", "Text → Video",
                 "Prompt → video (LTX-Video). Add a reference photo to animate "
-                "it instead — identity-preserving motion video (Wan2.2-I2V)."))
+                "it instead — identity-preserving motion video."))
             with gr.Row(equal_height=False):
                 with gr.Column(scale=1):
                     gr.HTML("<div class='section-label'>LTX-Video 0.9.7-distilled "
-                            "(open · needs the optional venv_ltx) — or Wan2.2-I2V "
-                            "(needs the optional venv_wan) if a photo is given. "
-                            "Width/height/frames are shared between both modes and "
+                            "(open · needs the optional venv_ltx) for prompt-only. "
+                            "With a photo, pick a motion engine below (needs the "
+                            "optional venv_wan or the venv_ltx you already have). "
+                            "Width/height/frames are shared across all modes and "
                             "tuned for LTX by default.</div>")
                     lx_img = gr.Image(label="Reference photo (optional) — animate "
                         "this instead of generating from scratch", type="filepath",
                         elem_classes=["output-media"])
+                    lx_engine = gr.Radio(
+                        ["Wan2.2-I2V (best identity/multi-subject)",
+                         "LTX 2.3 (faster, adds synchronized audio)"],
+                        value="Wan2.2-I2V (best identity/multi-subject)",
+                        label="Motion-video engine (used only when a photo is given)")
                     lx_prompt = gr.Textbox(label="Prompt", lines=3,
                         placeholder="A cinematic drone shot over snowy mountains at "
                                     "sunrise… or, with a photo: make them dance in joy")
@@ -451,7 +465,8 @@ with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
                                               label="Frames (~fps·sec)")
                         lx_steps  = gr.Slider(4, 30, value=7, step=1,
                                               label="Steps (text-only mode)")
-                        lx_guid   = gr.Slider(1.0, 5.0, value=1.0, step=0.5, label="Guidance")
+                        lx_guid   = gr.Slider(1.0, 5.0, value=1.0, step=0.5,
+                                              label="Guidance (text-only / Wan2.2-I2V)")
                     lx_btn = gr.Button("▶  Generate Video", variant="primary")
                 with gr.Column(scale=1):
                     gr.HTML("<div class='section-label'>Output</div>")
@@ -459,7 +474,7 @@ with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
                     lx_status = gr.HTML(AWAIT)
             lx_btn.click(run_ltx,
                          [lx_img, lx_prompt, lx_neg, lx_w, lx_h,
-                          lx_frames, lx_steps, lx_guid],
+                          lx_frames, lx_steps, lx_guid, lx_engine],
                          [lx_out, lx_status])
 
         # ── 05 Image Edit (FLUX.1-Kontext-dev) ───────────────────────────────

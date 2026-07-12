@@ -86,6 +86,16 @@ VENV_WAN_PY        = _venv_python("venv_wan")
 # few-step. Runs in its own venv (built by setup/make_ltx_venv.sh).
 LTX_REPO = "Lightricks/LTX-Video-0.9.7-distilled"
 
+# LTX-2.3 (Lightricks) image+prompt -> motion video WITH synchronized audio
+# (a single DiT-based audio-video model). Alternative engine to Wan2.2-I2V for
+# the Text -> Video tab's reference-photo path: faster/lighter, generates
+# audio too, trades some multi-subject identity fidelity per early
+# comparisons. Confirmed diffusers-compatible checkpoint (LTX2ImageToVideoPipeline)
+# per https://huggingface.co/docs/diffusers/main/en/api/pipelines/ltx2 --
+# shares venv_ltx (already installs diffusers from git, which includes the
+# ltx2 pipelines), no new venv needed.
+LTX2_REPO = "diffusers/LTX-2.3-Diffusers"
+
 # Wan2.2-I2V (Alibaba/Tongyi Wanxiang) image+prompt -> motion video, identity
 # preserving, handles multi-subject images (not per-face like classic
 # talking-head methods -- the uploaded photo is the first frame, diffusion
