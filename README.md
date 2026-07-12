@@ -41,8 +41,11 @@ Open **`VAJRA_v1.1_Colab.ipynb`**, set the runtime to a GPU (A100 recommended),
 and run the cells top to bottom. The last cell prints a public `*.gradio.live`
 link to the studio.
 
-Cells **7b / 7c / 7d** build the optional, heavy venvs (LTX, Wan2.2-I2V,
-Qwen-Image-Edit) — skip whichever tabs/engines you don't need.
+Cells **7b / 7c / 7d / 7e** build the optional, heavy venvs (LTX-Video,
+Wan2.2-I2V, Qwen-Image-Edit, LTX-2.3) — skip whichever tabs/engines you don't
+need. LTX-2.3 gets its own venv (7e), separate from LTX-Video's (7b): its
+pipeline needs a newer `transformers` (for its Gemma 3 text encoder) than
+LTX-Video's tokenizer will tolerate.
 
 To persist **model weights** across sessions, set `USE_DRIVE = True` in cell 2
 (covers everything fetched at setup *and* anything downloaded on first use of
@@ -56,14 +59,18 @@ app.py / app_theme.py     # Gradio UI (6 tabs, themed, share link)
 core/                     # config, device, model_manager, subprocess_runner
 engines/                  # one module per feature
 workers/                  # scripts run inside isolated venvs (voice, LTX, LTX-2.3, Wan2.2-I2V, Qwen-Image-Edit)
-setup/                    # install_main.sh · make_venvs.sh · make_ltx_venv.sh · make_wan_venv.sh · make_qwen_venv.sh · download_models.py
+setup/                    # install_main.sh · make_venvs.sh · make_ltx_venv.sh · make_ltx2_venv.sh · make_wan_venv.sh · make_qwen_venv.sh · download_models.py
 requirements/             # one pinned file per venv
 third_party/              # cloned at setup: Wav2Lip, LatentSync, CodeFormer
 ```
 
-**Why isolated venvs?** XTTS, LatentSync, LTX, Wan2.2 and Qwen-Image-Edit each
-pin mutually incompatible `torch`/`transformers`/`diffusers` versions. Each
-runs in its own venv, invoked via `core/subprocess_runner.py`; the main env
+**Why isolated venvs?** XTTS, LatentSync, LTX-Video, LTX-2.3, Wan2.2 and
+Qwen-Image-Edit each pin mutually incompatible `torch`/`transformers`/
+`diffusers` versions — LTX-Video and LTX-2.3 even conflict with *each other*
+(LTX-Video needs `transformers<4.50` to dodge a tokenizer regression;
+LTX-2.3 needs `>=4.50` for its Gemma 3 text encoder), so they get separate
+venvs too. Each runs in its own venv, invoked via `core/subprocess_runner.py`;
+the main env
 keeps only Gradio + SDXL/diffusers + InsightFace + faster-whisper. A side
 benefit: subprocess engines release their VRAM on exit, so heavy models don't
 pile up on the GPU. In-process models (SDXL, face swap) share a single-

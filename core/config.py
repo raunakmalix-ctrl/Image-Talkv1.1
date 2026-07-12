@@ -74,6 +74,7 @@ def _venv_python(name):
 VENV_VOICE_PY      = _venv_python("venv_voice")
 VENV_LATENTSYNC_PY = _venv_python("venv_latentsync")
 VENV_LTX_PY        = _venv_python("venv_ltx")
+VENV_LTX2_PY       = _venv_python("venv_ltx2")
 VENV_WAN_PY        = _venv_python("venv_wan")
 VENV_QWEN_PY       = _venv_python("venv_qwen")
 
@@ -87,8 +88,13 @@ LTX_REPO = "Lightricks/LTX-Video-0.9.7-distilled"
 # audio too, trades some multi-subject identity fidelity per early
 # comparisons. Confirmed diffusers-compatible checkpoint (LTX2ImageToVideoPipeline)
 # per https://huggingface.co/docs/diffusers/main/en/api/pipelines/ltx2 --
-# shares venv_ltx (already installs diffusers from git, which includes the
-# ltx2 pipelines), no new venv needed.
+# runs in its OWN venv (built by setup/make_ltx2_venv.sh), NOT shared with
+# venv_ltx: LTX-2.3's pipeline unconditionally imports
+# Gemma3ForConditionalGeneration (its default text encoder) at module load
+# time, which needs transformers>=~4.50 -- but venv_ltx pins transformers
+# <4.50 specifically to dodge a different tokenizer regression that breaks
+# LTX-0.9.7-distilled (see requirements/ltx.txt). Confirmed via a real
+# ImportError in Colab, not assumed.
 LTX2_REPO = "diffusers/LTX-2.3-Diffusers"
 
 # Wan2.2-I2V (Alibaba/Tongyi Wanxiang) image+prompt -> motion video, identity
