@@ -51,6 +51,24 @@ def transcode_h264(video_path):
     return out
 
 
+def mux_audio(video_path, audio_path, out_path=None):
+    """Replace video_path's audio track with audio_path's (re-encoded to
+    AAC); the video stream is copied untouched. The shorter of the two
+    streams determines the output length. Returns the new video path.
+
+    This is audio PAIRING, not conditioning -- the video's visual content is
+    already generated and unaffected by audio_path's actual content."""
+    out_path = out_path or timestamp_file("muxed", "mp4")
+    subprocess.run(
+        [FFMPEG_PATH, "-y", "-i", video_path, "-i", audio_path,
+         "-c:v", "copy", "-c:a", "aac",
+         "-map", "0:v:0", "-map", "1:a:0",
+         "-shortest", out_path],
+        check=True, capture_output=True, text=True,
+    )
+    return out_path
+
+
 def audio_duration(audio_path):
     """Duration in seconds, or None on failure."""
     try:

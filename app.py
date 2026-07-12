@@ -37,7 +37,7 @@ except Exception:
 
 from core.engine_registry import ENGINES
 from core.model_manager import vram_status
-from core.utils import audio_duration
+from core.utils import audio_duration, mux_audio
 from core.config import OUTPUTS_DIR
 
 diffusion   = ENGINES["diffusion"]
@@ -222,7 +222,7 @@ def run_faceswap(source, mode, target_img, target_vid, enhancer,
 
 # ── Feature: Text → Video (LTX text-only, or a motion-video engine w/ a photo)
 def run_ltx(image, prompt, negative, width, height, num_frames, steps, guidance,
-            motion_engine):
+            motion_engine, ref_audio):
     if not prompt or not prompt.strip():
         return None, warn("Prompt required")
     GPU_LOCK.acquire()
@@ -245,6 +245,11 @@ def run_ltx(image, prompt, negative, width, height, num_frames, steps, guidance,
                           width=int(width), height=int(height),
                           num_frames=int(num_frames), steps=int(steps),
                           guidance=float(guidance))
+        if ref_audio:
+            # Pairing, not conditioning: replaces whatever audio the engine
+            # generated (or adds one to Wan2.2-I2V's silent output). The
+            # visuals were already generated and don't respond to this audio.
+            out = mux_audio(out, ref_audio)
         return out, ok(os.path.basename(out))
     except Exception as e:
         return None, err(str(e))
@@ -435,7 +440,8 @@ with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
         with gr.Tab("04 · Text → Video", id=3):
             gr.HTML(hero("ti-movie", "Text → Video",
                 "Prompt → video (LTX-Video). Add a reference photo to animate "
-                "it instead — identity-preserving motion video."))
+                "it instead — identity-preserving motion video. Optionally pair "
+                "your own audio as the soundtrack."))
             with gr.Row(equal_height=False):
                 with gr.Column(scale=1):
                     gr.HTML("<div class='section-label'>LTX-Video 0.9.7-distilled "
@@ -452,6 +458,10 @@ with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
                          "LTX 2.3 (faster, adds synchronized audio)"],
                         value="Wan2.2-I2V (best identity/multi-subject)",
                         label="Motion-video engine (used only when a photo is given)")
+                    lx_audio = gr.Audio(label="Reference audio (optional) — paired "
+                        "as this video's soundtrack; does NOT influence the "
+                        "generated visuals (it's audio pairing, not conditioning)",
+                        type="filepath")
                     lx_prompt = gr.Textbox(label="Prompt", lines=3,
                         placeholder="A cinematic drone shot over snowy mountains at "
                                     "sunrise… or, with a photo: make them dance in joy")
@@ -474,7 +484,7 @@ with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
                     lx_status = gr.HTML(AWAIT)
             lx_btn.click(run_ltx,
                          [lx_img, lx_prompt, lx_neg, lx_w, lx_h,
-                          lx_frames, lx_steps, lx_guid, lx_engine],
+                          lx_frames, lx_steps, lx_guid, lx_engine, lx_audio],
                          [lx_out, lx_status])
 
         # ── 05 Image Edit (FLUX.1-Kontext-dev) ───────────────────────────────
