@@ -135,8 +135,7 @@ def do_relip(state, edited_text, method, steps, guidance,
     GPU_LOCK.acquire()
     try:
         free_inprocess()
-        method_map = {"LatentSync": "latentsync", "MuseTalk": "musetalk",
-                      "Wav2Lip": "wav2lip"}
+        method_map = {"LatentSync": "latentsync", "Wav2Lip": "wav2lip"}
         m = next((v for k, v in method_map.items() if method.startswith(k)),
                  "latentsync")
         out = transcript.apply_edits(
@@ -342,7 +341,7 @@ with gr.Blocks(css=CSS, title="VAJRA", analytics_enabled=False) as demo:
                         placeholder="Transcript appears here after extraction…")
                     with gr.Row():
                         ed_method = gr.Radio(
-                            ["LatentSync (best)", "MuseTalk (sharp)", "Wav2Lip (fast)"],
+                            ["LatentSync (best)", "Wav2Lip (fast)"],
                             value="LatentSync (best)", label="Lip-sync")
                         ed_steps  = gr.Slider(10, 50, value=20, step=1,
                                               label="Diffusion steps")

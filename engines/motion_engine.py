@@ -2,11 +2,11 @@
 Wan2.2-I2V motion video: a reference photo + text prompt -> identity-
 preserving motion video, run in venv_wan via a worker subprocess.
 
-Replaces classic audio-driven "talking head" animation (SadTalker/MuseTalk)
-for the Text -> Video tab's optional-image path: the uploaded photo becomes
-the first frame and the model generates motion following the prompt, with no
-audio/lip-sync involved. Because it's whole-image conditioned rather than
-per-face like SadTalker/MuseTalk, multi-subject photos are handled directly.
+Replaces classic audio-driven "talking head" animation for the Text -> Video
+tab's optional-image path: the uploaded photo becomes the first frame and the
+model generates motion following the prompt, with no audio/lip-sync
+involved. Because it's whole-image conditioned rather than per-face like
+classic talking-head methods, multi-subject photos are handled directly.
 """
 import os
 

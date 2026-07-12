@@ -28,10 +28,6 @@ class LipSyncEngine(BaseEngine):
         if not os.path.exists(audio_path):
             raise FileNotFoundError(f"Audio not found: {audio_path}")
 
-        if method == "musetalk":
-            from engines.musetalk_engine import MuseTalkEngine
-            return MuseTalkEngine().run(video_path, audio_path)
-
         if not os.path.exists(VENV_LATENTSYNC_PY):
             raise RuntimeError("venv_latentsync missing — run setup/make_venvs.sh")
 

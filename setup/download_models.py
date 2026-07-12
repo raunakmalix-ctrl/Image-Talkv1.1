@@ -84,7 +84,7 @@ def _link_tree(src_dir, dst_dir):
     dst_dir, skipping anything already there. Keeps the real blobs on
     persistent storage (MODEL_ROOT, Drive-backed when USE_DRIVE=True) and
     only places lightweight symlinks where the consuming code expects them
-    -- same idea as setup/download_musetalk_weights.py's _link_or_copy."""
+    -- same real-storage-plus-symlink idea used throughout this project."""
     import shutil
     for root, _, files in os.walk(src_dir):
         for fn in files:

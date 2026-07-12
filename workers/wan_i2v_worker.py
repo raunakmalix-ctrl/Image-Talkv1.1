@@ -3,8 +3,8 @@ Runs inside venv_wan (diffusers, WanImageToVideoPipeline). Identity-preserving
 motion video from a reference photo + a text prompt describing the action
 (Wan2.2-I2V-A14B) -- the photo is the first frame, diffusion generates the
 rest following the prompt. Not audio/lip-sync driven, and not per-face like
-SadTalker/MuseTalk, so multi-subject photos (e.g. two people) are handled
-naturally as part of the whole-image conditioning.
+classic talking-head methods, so multi-subject photos (e.g. two people) are
+handled naturally as part of the whole-image conditioning.
 
 Invoked by core.subprocess_runner.run_worker.
 
