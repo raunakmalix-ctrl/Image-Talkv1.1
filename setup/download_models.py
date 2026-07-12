@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.config import (
     MODEL_ROOT, XTTS_DIR, INSIGHTFACE_ROOT, INSWAPPER_PATH, GFPGAN_PATH,
-    WAV2LIP_CKPT, LATENTSYNC_DIR,
+    WAV2LIP_CKPT, LATENTSYNC_DIR, LATENTSYNC_WEIGHTS_DIR,
 )
 
 # Empty string -> None, otherwise hf_hub builds an illegal "Bearer " header.
@@ -79,12 +79,36 @@ def wav2lip():
           "models/wav2lip_gan.pth", WAV2LIP_CKPT)
 
 
+def _link_tree(src_dir, dst_dir):
+    """Symlink every file under src_dir into the matching path under
+    dst_dir, skipping anything already there. Keeps the real blobs on
+    persistent storage (MODEL_ROOT, Drive-backed when USE_DRIVE=True) and
+    only places lightweight symlinks where the consuming code expects them
+    -- same idea as setup/download_musetalk_weights.py's _link_or_copy."""
+    import shutil
+    for root, _, files in os.walk(src_dir):
+        for fn in files:
+            src = os.path.join(root, fn)
+            dst = os.path.join(dst_dir, os.path.relpath(src, src_dir))
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            if os.path.lexists(dst):
+                continue
+            try:
+                os.symlink(os.path.realpath(src), dst)
+            except OSError:
+                shutil.copy2(src, dst)
+
+
 def latentsync():
-    # LatentSync 1.5 weights -> third_party/LatentSync/checkpoints
+    # LatentSync 1.5 weights: download the real blobs to MODEL_ROOT (Drive-
+    # persisted when USE_DRIVE=True), then symlink them into
+    # third_party/LatentSync/checkpoints/, the path LatentSync's own
+    # inference script expects (LATENTSYNC_CKPT).
     ckpt_dir = os.path.join(LATENTSYNC_DIR, "checkpoints")
     if os.path.exists(os.path.join(ckpt_dir, "latentsync_unet.pt")):
         print("  exists"); return
-    _hf_snapshot("ByteDance/LatentSync-1.5", ckpt_dir)
+    _hf_snapshot("ByteDance/LatentSync-1.5", LATENTSYNC_WEIGHTS_DIR)
+    _link_tree(LATENTSYNC_WEIGHTS_DIR, ckpt_dir)
 
 
 def main():

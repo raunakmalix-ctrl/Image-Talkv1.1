@@ -20,9 +20,24 @@ OUTPUTS_DIR  = os.path.join(PROJECT_ROOT, "outputs")
 UPLOADS_DIR  = os.path.join(PROJECT_ROOT, "uploads")
 THIRD_PARTY  = os.path.join(PROJECT_ROOT, "third_party")   # cloned model repos
 VENV_ROOT    = os.environ.get("IMAGE_TALK_VENVS", os.path.join(PROJECT_ROOT, "venvs"))
+HF_CACHE_DIR = os.path.join(MODEL_ROOT, "hf_cache")
 
-for _d in (MODEL_ROOT, OUTPUTS_DIR, UPLOADS_DIR, THIRD_PARTY, VENV_ROOT):
+for _d in (MODEL_ROOT, OUTPUTS_DIR, UPLOADS_DIR, THIRD_PARTY, VENV_ROOT, HF_CACHE_DIR):
     os.makedirs(_d, exist_ok=True)
+
+# Every from_pretrained()/snapshot_download() call in this project (SDXL/FLUX
+# here in the main process, LTX/Kontext/Wan2.2 in their subprocess workers,
+# MuseTalk's downloader) otherwise falls back to Hugging Face's default cache
+# (~/.cache/huggingface/hub) -- local to the Colab VM disk, wiped every
+# session, and NOT covered by the MODEL_ROOT Drive redirect above despite
+# USE_DRIVE claiming to cache "model weights". Route it through MODEL_ROOT
+# too, so USE_DRIVE actually covers everything. Derived fresh from MODEL_ROOT
+# on every import (rather than a notebook cell setting it once) so it's
+# correct in every process: the main app imports core.config directly;
+# subprocess workers inherit it via core/subprocess_runner.py's clean_env(),
+# which copies the parent's environment; the download scripts import
+# core.config directly too.
+os.environ.setdefault("HF_HUB_CACHE", HF_CACHE_DIR)
 
 # ── Cloned model repositories (third_party/) ────────────────────────────────
 WAV2LIP_DIR    = os.path.join(THIRD_PARTY, "Wav2Lip")
@@ -50,7 +65,14 @@ CODEFORMER_PATH  = os.path.join(MODEL_ROOT, "codeformer", "codeformer.pth")
 # Voice clone
 XTTS_DIR = os.path.join(MODEL_ROOT, "xtts")
 
-# Lip sync — LatentSync likewise reads from its repo checkpoints dir.
+# Lip sync — LatentSync's own inference script expects its checkpoint at a
+# fixed path inside the cloned repo (LATENTSYNC_CKPT). The real weight files
+# live under MODEL_ROOT (Drive-persisted); download_models.py symlinks them
+# into place, the same real-storage-plus-symlink pattern used for MuseTalk's
+# weights in setup/download_musetalk_weights.py -- previously this path
+# pointed straight into third_party/, which is never Drive-cached and was
+# silently rebuilt from scratch every session regardless of USE_DRIVE.
+LATENTSYNC_WEIGHTS_DIR = os.path.join(MODEL_ROOT, "latentsync")
 WAV2LIP_CKPT      = os.path.join(MODEL_ROOT, "wav2lip", "wav2lip_gan.pth")
 LATENTSYNC_CKPT   = os.path.join(LATENTSYNC_DIR, "checkpoints", "latentsync_unet.pt")
 LATENTSYNC_CONFIG = os.path.join(LATENTSYNC_DIR, "configs", "unet", "stage2.yaml")
